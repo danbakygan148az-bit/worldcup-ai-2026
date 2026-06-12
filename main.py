@@ -12,10 +12,14 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
+from openai import AsyncOpenAI
 
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 bot = Bot(
     token=BOT_TOKEN,
@@ -31,18 +35,8 @@ favorite_team = {}
 def language_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="🇷🇺 Русский",
-                    callback_data="lang_ru",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🇬🇧 English",
-                    callback_data="lang_en",
-                )
-            ],
+            [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang_ru")],
+            [InlineKeyboardButton(text="🇬🇧 English", callback_data="lang_en")],
         ]
     )
 
@@ -51,30 +45,15 @@ def teams_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(
-                    text="🇧🇷 Brazil",
-                    callback_data="team_brazil",
-                ),
-                InlineKeyboardButton(
-                    text="🇫🇷 France",
-                    callback_data="team_france",
-                ),
+                InlineKeyboardButton(text="🇧🇷 Brazil", callback_data="team_brazil"),
+                InlineKeyboardButton(text="🇫🇷 France", callback_data="team_france"),
             ],
             [
-                InlineKeyboardButton(
-                    text="🇦🇷 Argentina",
-                    callback_data="team_argentina",
-                ),
-                InlineKeyboardButton(
-                    text="🇩🇪 Germany",
-                    callback_data="team_germany",
-                ),
+                InlineKeyboardButton(text="🇦🇷 Argentina", callback_data="team_argentina"),
+                InlineKeyboardButton(text="🇩🇪 Germany", callback_data="team_germany"),
             ],
             [
-                InlineKeyboardButton(
-                    text="🇪🇸 Spain",
-                    callback_data="team_spain",
-                )
+                InlineKeyboardButton(text="🇪🇸 Spain", callback_data="team_spain")
             ],
         ]
     )
@@ -84,30 +63,15 @@ def home_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(
-                    text="⚽ Матчи",
-                    callback_data="matches",
-                ),
-                InlineKeyboardButton(
-                    text="🏆 ЧМ-2026",
-                    callback_data="worldcup",
-                ),
+                InlineKeyboardButton(text="⚽ Матчи", callback_data="matches"),
+                InlineKeyboardButton(text="🏆 ЧМ-2026", callback_data="worldcup"),
             ],
             [
-                InlineKeyboardButton(
-                    text="📊 Анализ",
-                    callback_data="analysis",
-                ),
-                InlineKeyboardButton(
-                    text="🧠 AI Coach",
-                    callback_data="coach",
-                ),
+                InlineKeyboardButton(text="📊 Анализ", callback_data="analysis"),
+                InlineKeyboardButton(text="🧠 AI Coach", callback_data="coach"),
             ],
             [
-                InlineKeyboardButton(
-                    text="🔥 Прогнозы",
-                    callback_data="predictions",
-                )
+                InlineKeyboardButton(text="🔥 Прогнозы", callback_data="predictions")
             ],
         ]
     )
@@ -115,24 +79,20 @@ def home_keyboard():
 
 @dp.message(CommandStart())
 async def start_handler(message: Message):
-    text = """
+    await message.answer(
+        """
 🏆 <b>Welcome to WorldCup AI</b>
 
 Твой AI-ассистент по Чемпионату мира 2026 ⚽
 
 Выбери язык:
-"""
-    await message.answer(
-        text,
+""",
         reply_markup=language_keyboard(),
     )
 
 
 @dp.callback_query(F.data.startswith("lang_"))
 async def language_selected(callback: CallbackQuery):
-    lang = callback.data.replace("lang_", "")
-    user_language[callback.from_user.id] = lang
-
     await callback.message.edit_text(
         "⚽ Выбери любимую сборную:",
         reply_markup=teams_keyboard(),
@@ -142,7 +102,6 @@ async def language_selected(callback: CallbackQuery):
 @dp.callback_query(F.data.startswith("team_"))
 async def team_selected(callback: CallbackQuery):
     team = callback.data.replace("team_", "")
-    favorite_team[callback.from_user.id] = team
 
     await callback.message.edit_text(
         f"""
@@ -150,97 +109,51 @@ async def team_selected(callback: CallbackQuery):
 
 Любимая команда:
 <b>{team.title()}</b>
-
-Добро пожаловать ⚽
 """,
         reply_markup=home_keyboard(),
     )
 
 
-@dp.callback_query(F.data == "matches")
-async def matches(callback: CallbackQuery):
-    await callback.answer()
+async def football_ai(prompt: str):
+    response = await client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": """
+You are a premium FIFA World Cup 2026 football analyst.
 
-    await callback.message.answer(
-        """
-⚽ <b>Матчи сегодня</b>
+Answer short and premium style.
 
-🇧🇷 Brazil vs France 🇫🇷
-20:00
+Format:
+⚽ short analysis
+🧠 key insight
+🎯 prediction
 
-🇦🇷 Argentina vs Germany 🇩🇪
-22:00
-"""
+Keep answers concise.
+""",
+            },
+            {"role": "user", "content": prompt},
+        ],
     )
 
-
-@dp.callback_query(F.data == "analysis")
-async def analysis(callback: CallbackQuery):
-    await callback.answer()
-
-    await callback.message.answer(
-        """
-📊 <b>AI Analysis</b>
-
-France выглядит немного сильнее.
-
-🧠 Ключ:
-контроль центра поля.
-
-🎯 Прогноз:
-2:1
-"""
-    )
-
-
-@dp.callback_query(F.data == "coach")
-async def coach(callback: CallbackQuery):
-    await callback.answer()
-
-    await callback.message.answer(
-        """
-🧠 <b>AI Coach</b>
-
-Germany проиграла центр поля
-и слишком часто теряла мяч под прессингом.
-"""
-    )
+    return response.choices[0].message.content
 
 
 @dp.message()
 async def smart_chat(message: Message):
-    text = message.text.lower()
+    wait_message = await message.answer(
+        "🧠 Анализирую матч..."
+    )
 
-    if "brazil" in text or "бразилия" in text:
-        await message.answer(
-            """
-🇧🇷 Brazil Analysis
+    try:
+        result = await football_ai(message.text)
 
-Brazil выглядит сильно.
+        await wait_message.edit_text(result)
 
-🎯 AI Score:
-2:1
-"""
-        )
-
-    elif "кто выиграет" in text:
-        await message.answer(
-            """
-🏆 Prediction
-
-1. France
-2. Brazil
-3. Argentina
-"""
-        )
-
-    else:
-        await message.answer(
-            """
-⚽ WorldCup AI понял запрос.
-
-Полный AI-анализ скоро.
-"""
+    except Exception:
+        await wait_message.edit_text(
+            "⚠️ AI временно недоступен."
         )
 
 
