@@ -1,0 +1,1 @@
+# worldcup-ai-2026
