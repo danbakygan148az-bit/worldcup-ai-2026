@@ -12,14 +12,10 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
-from openai import AsyncOpenAI
 
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 bot = Bot(
     token=BOT_TOKEN,
@@ -27,9 +23,6 @@ bot = Bot(
 )
 
 dp = Dispatcher()
-
-user_language = {}
-favorite_team = {}
 
 
 def language_keyboard():
@@ -53,7 +46,7 @@ def teams_keyboard():
                 InlineKeyboardButton(text="🇩🇪 Germany", callback_data="team_germany"),
             ],
             [
-                InlineKeyboardButton(text="🇪🇸 Spain", callback_data="team_spain")
+                InlineKeyboardButton(text="🇪🇸 Spain", callback_data="team_spain"),
             ],
         ]
     )
@@ -64,14 +57,14 @@ def home_keyboard():
         inline_keyboard=[
             [
                 InlineKeyboardButton(text="⚽ Матчи", callback_data="matches"),
-                InlineKeyboardButton(text="🏆 ЧМ-2026", callback_data="worldcup"),
+                InlineKeyboardButton(text="🏆 ЧМ-2026", callback_data="wc"),
             ],
             [
                 InlineKeyboardButton(text="📊 Анализ", callback_data="analysis"),
                 InlineKeyboardButton(text="🧠 AI Coach", callback_data="coach"),
             ],
             [
-                InlineKeyboardButton(text="🔥 Прогнозы", callback_data="predictions")
+                InlineKeyboardButton(text="🔥 Прогнозы", callback_data="predictions"),
             ],
         ]
     )
@@ -92,7 +85,7 @@ async def start_handler(message: Message):
 
 
 @dp.callback_query(F.data.startswith("lang_"))
-async def language_selected(callback: CallbackQuery):
+async def language_handler(callback: CallbackQuery):
     await callback.message.edit_text(
         "⚽ Выбери любимую сборную:",
         reply_markup=teams_keyboard(),
@@ -100,7 +93,7 @@ async def language_selected(callback: CallbackQuery):
 
 
 @dp.callback_query(F.data.startswith("team_"))
-async def team_selected(callback: CallbackQuery):
+async def team_handler(callback: CallbackQuery):
     team = callback.data.replace("team_", "")
 
     await callback.message.edit_text(
@@ -109,13 +102,15 @@ async def team_selected(callback: CallbackQuery):
 
 Любимая команда:
 <b>{team.title()}</b>
+
+Добро пожаловать ⚽
 """,
         reply_markup=home_keyboard(),
     )
 
 
-async def football_ai(prompt: str):
-    text = prompt.lower()
+async def football_ai(text: str):
+    text = text.lower()
 
     if "brazil" in text or "бразилия" in text:
         return """
@@ -125,88 +120,65 @@ async def football_ai(prompt: str):
 
 🧠 Сильные стороны:
 • быстрые фланги
-• высокий прессинг
 • техника
+• прессинг
 
 🎯 Прогноз:
-Brazil фаворит.
-Вероятный счёт: <b>2:1</b>
+<b>2:1</b>
 """
 
-    elif "germany" in text or "германия" in text:
+    if "germany" in text or "германия" in text:
         return """
 🇩🇪 <b>Germany Analysis</b>
 
-⚽ Germany часто доминирует через владение.
+⚽ Germany сильна через контроль мяча.
 
-🧠 Проблема:
-потеря темпа под высоким прессингом.
+🧠 Слабость:
+давление и быстрые контратаки.
 
 🎯 Прогноз:
-Шансы хорошие,
-но защита нестабильна.
+Высокие шансы на плей-офф.
 """
 
-    elif "france" in text or "франция" in text:
+    if "france" in text or "франция" in text:
         return """
 🇫🇷 <b>France Analysis</b>
 
-⚽ France выглядит одной из сильнейших сборных.
+⚽ France — один из фаворитов турнира.
 
 🧠 Ключ:
-баланс между обороной и атакой.
+баланс атаки и обороны.
 
 🎯 Прогноз:
-топ-кандидат на титул.
+полуфинал или финал.
 """
 
-    elif "кто выиграет" in text:
+    if "кто выиграет" in text:
         return """
 🏆 <b>World Cup Prediction</b>
 
 1. 🇫🇷 France
 2. 🇧🇷 Brazil
 3. 🇦🇷 Argentina
-
-🧠 AI считает France фаворитом.
 """
 
-    elif "vs" in text or " " in text:
-        return f"""
+    return f"""
 ⚽ <b>Match Analysis</b>
 
-🧠 {prompt.title()} выглядит как матч высокого уровня.
+🧠 Анализ:
+{ text.title() }
 
-🎯 Вероятный счёт:
+🎯 Прогноз:
 <b>2:1</b>
 
-🔥 Игра будет напряжённой.
+🔥 Матч выглядит напряжённым.
 """
 
-    return """
-⚽ <b>WorldCup AI</b>
-
-Спроси про:
-• Brazil France
-• Кто выиграет ЧМ?
-• Почему Germany проиграла?
-"""
 
 @dp.message()
 async def smart_chat(message: Message):
-    wait_message = await message.answer(
-        "🧠 Анализирую матч..."
-    )
-
-    try:
-        result = await football_ai(message.text)
-
-        await wait_message.edit_text(result)
-
-    except Exception:
-        await wait_message.edit_text(
-            "⚠️ AI временно недоступен."
-        )
+    response = await football_ai(message.text)
+    await message.answer(response)
 
 
 async def main():
