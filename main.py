@@ -115,30 +115,82 @@ async def team_selected(callback: CallbackQuery):
 
 
 async def football_ai(prompt: str):
-    response = await client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": """
-You are a premium FIFA World Cup 2026 football analyst.
+    text = prompt.lower()
 
-Answer short and premium style.
+    if "brazil" in text or "бразилия" in text:
+        return """
+🇧🇷 <b>Brazil Analysis</b>
 
-Format:
-⚽ short analysis
-🧠 key insight
-🎯 prediction
+⚽ Brazil выглядит очень опасно в атаке.
 
-Keep answers concise.
-""",
-            },
-            {"role": "user", "content": prompt},
-        ],
-    )
+🧠 Сильные стороны:
+• быстрые фланги
+• высокий прессинг
+• техника
 
-    return response.choices[0].message.content
+🎯 Прогноз:
+Brazil фаворит.
+Вероятный счёт: <b>2:1</b>
+"""
 
+    elif "germany" in text or "германия" in text:
+        return """
+🇩🇪 <b>Germany Analysis</b>
+
+⚽ Germany часто доминирует через владение.
+
+🧠 Проблема:
+потеря темпа под высоким прессингом.
+
+🎯 Прогноз:
+Шансы хорошие,
+но защита нестабильна.
+"""
+
+    elif "france" in text or "франция" in text:
+        return """
+🇫🇷 <b>France Analysis</b>
+
+⚽ France выглядит одной из сильнейших сборных.
+
+🧠 Ключ:
+баланс между обороной и атакой.
+
+🎯 Прогноз:
+топ-кандидат на титул.
+"""
+
+    elif "кто выиграет" in text:
+        return """
+🏆 <b>World Cup Prediction</b>
+
+1. 🇫🇷 France
+2. 🇧🇷 Brazil
+3. 🇦🇷 Argentina
+
+🧠 AI считает France фаворитом.
+"""
+
+    elif "vs" in text or " " in text:
+        return f"""
+⚽ <b>Match Analysis</b>
+
+🧠 {prompt.title()} выглядит как матч высокого уровня.
+
+🎯 Вероятный счёт:
+<b>2:1</b>
+
+🔥 Игра будет напряжённой.
+"""
+
+    return """
+⚽ <b>WorldCup AI</b>
+
+Спроси про:
+• Brazil France
+• Кто выиграет ЧМ?
+• Почему Germany проиграла?
+"""
 
 @dp.message()
 async def smart_chat(message: Message):
