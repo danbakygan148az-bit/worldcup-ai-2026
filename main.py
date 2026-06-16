@@ -25,6 +25,8 @@ bot = Bot(
 dp = Dispatcher()
 
 
+# ---------------- KEYBOARDS ----------------
+
 def language_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -34,41 +36,40 @@ def language_keyboard():
     )
 
 
-def teams_keyboard():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🇧🇷 Brazil", callback_data="team_brazil"),
-                InlineKeyboardButton(text="🇫🇷 France", callback_data="team_france"),
-            ],
-            [
-                InlineKeyboardButton(text="🇦🇷 Argentina", callback_data="team_argentina"),
-                InlineKeyboardButton(text="🇩🇪 Germany", callback_data="team_germany"),
-            ],
-            [
-                InlineKeyboardButton(text="🇪🇸 Spain", callback_data="team_spain"),
-            ],
-        ]
-    )
-
-
 def home_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="⚽ Матчи", callback_data="matches"),
-                InlineKeyboardButton(text="🏆 ЧМ-2026", callback_data="wc"),
+                InlineKeyboardButton(
+                    text="⚽ Матчи сегодня",
+                    callback_data="today_matches",
+                )
             ],
             [
-                InlineKeyboardButton(text="📊 Анализ", callback_data="analysis"),
-                InlineKeyboardButton(text="🧠 AI Coach", callback_data="coach"),
+                InlineKeyboardButton(
+                    text="📅 Расписание",
+                    callback_data="schedule",
+                ),
+                InlineKeyboardButton(
+                    text="🏆 Группы",
+                    callback_data="groups",
+                ),
             ],
             [
-                InlineKeyboardButton(text="🔥 Прогнозы", callback_data="predictions"),
+                InlineKeyboardButton(
+                    text="🌍 Команды",
+                    callback_data="teams",
+                ),
+                InlineKeyboardButton(
+                    text="🌐 Language",
+                    callback_data="language",
+                ),
             ],
         ]
     )
 
+
+# ---------------- START ----------------
 
 @dp.message(CommandStart())
 async def start_handler(message: Message):
@@ -76,9 +77,9 @@ async def start_handler(message: Message):
         """
 🏆 <b>Welcome to WorldCup AI</b>
 
-Твой AI-ассистент по Чемпионату мира 2026 ⚽
+Ваш помощник по Чемпионату мира 2026 ⚽
 
-Выбери язык:
+Выберите язык:
 """,
         reply_markup=language_keyboard(),
     )
@@ -87,99 +88,139 @@ async def start_handler(message: Message):
 @dp.callback_query(F.data.startswith("lang_"))
 async def language_handler(callback: CallbackQuery):
     await callback.message.edit_text(
-        "⚽ Выбери любимую сборную:",
-        reply_markup=teams_keyboard(),
-    )
-
-
-@dp.callback_query(F.data.startswith("team_"))
-async def team_handler(callback: CallbackQuery):
-    team = callback.data.replace("team_", "")
-
-    await callback.message.edit_text(
-        f"""
+        """
 🏆 <b>WorldCup AI</b>
 
-Любимая команда:
-<b>{team.title()}</b>
+Добро пожаловать!
 
-Добро пожаловать ⚽
+Выберите раздел:
 """,
         reply_markup=home_keyboard(),
     )
 
 
-async def football_ai(text: str):
-    text = text.lower()
+# ---------------- TODAY MATCHES ----------------
 
-    if "brazil" in text or "бразилия" in text:
-        return """
-🇧🇷 <b>Brazil Analysis</b>
+@dp.callback_query(F.data == "today_matches")
+async def today_matches(callback: CallbackQuery):
+    await callback.answer()
 
-⚽ Brazil выглядит очень опасно в атаке.
+    await callback.message.answer(
+        """
+⚽ <b>Матчи сегодня</b>
 
-🧠 Сильные стороны:
-• быстрые фланги
-• техника
-• прессинг
+🇧🇷 Brazil vs France 🇫🇷
+🕗 20:00
 
-🎯 Прогноз:
-<b>2:1</b>
+🇦🇷 Argentina vs Germany 🇩🇪
+🕙 22:00
+
+🇪🇸 Spain vs Mexico 🇲🇽
+🕕 18:00
 """
+    )
 
-    if "germany" in text or "германия" in text:
-        return """
-🇩🇪 <b>Germany Analysis</b>
 
-⚽ Germany сильна через контроль мяча.
+# ---------------- SCHEDULE ----------------
 
-🧠 Слабость:
-давление и быстрые контратаки.
+@dp.callback_query(F.data == "schedule")
+async def schedule(callback: CallbackQuery):
+    await callback.answer()
 
-🎯 Прогноз:
-Высокие шансы на плей-офф.
+    await callback.message.answer(
+        """
+📅 <b>Расписание ЧМ-2026</b>
+
+1️⃣ Group Stage
+
+2️⃣ Round of 16
+
+3️⃣ Quarterfinals
+
+4️⃣ Semifinals
+
+5️⃣ Final 🏆
 """
+    )
 
-    if "france" in text or "франция" in text:
-        return """
-🇫🇷 <b>France Analysis</b>
 
-⚽ France — один из фаворитов турнира.
+# ---------------- GROUPS ----------------
 
-🧠 Ключ:
-баланс атаки и обороны.
+@dp.callback_query(F.data == "groups")
+async def groups(callback: CallbackQuery):
+    await callback.answer()
 
-🎯 Прогноз:
-полуфинал или финал.
+    await callback.message.answer(
+        """
+🏆 <b>Группы ЧМ-2026</b>
+
+<b>Group A</b>
+🇧🇷 Brazil
+🇫🇷 France
+🇲🇽 Mexico
+🇯🇵 Japan
+
+<b>Group B</b>
+🇦🇷 Argentina
+🇩🇪 Germany
+🇪🇸 Spain
+🇺🇸 USA
 """
+    )
 
-    if "кто выиграет" in text:
-        return """
-🏆 <b>World Cup Prediction</b>
 
-1. 🇫🇷 France
-2. 🇧🇷 Brazil
-3. 🇦🇷 Argentina
+# ---------------- TEAMS ----------------
+
+@dp.callback_query(F.data == "teams")
+async def teams(callback: CallbackQuery):
+    await callback.answer()
+
+    await callback.message.answer(
+        """
+🌍 <b>Команды</b>
+
+🇧🇷 Brazil
+🇫🇷 France
+🇦🇷 Argentina
+🇩🇪 Germany
+🇪🇸 Spain
+🇲🇽 Mexico
+🇺🇸 USA
+🇯🇵 Japan
 """
+    )
 
-    return f"""
-⚽ <b>Match Analysis</b>
 
-🧠 Анализ:
-{ text.title() }
+# ---------------- LANGUAGE ----------------
 
-🎯 Прогноз:
-<b>2:1</b>
+@dp.callback_query(F.data == "language")
+async def language(callback: CallbackQuery):
+    await callback.answer()
 
-🔥 Матч выглядит напряжённым.
-"""
+    await callback.message.answer(
+        "🌐 Выберите язык:",
+        reply_markup=language_keyboard(),
+    )
 
+
+# ---------------- TEXT ----------------
 
 @dp.message()
-async def smart_chat(message: Message):
-    response = await football_ai(message.text)
-    await message.answer(response)
+async def text_handler(message: Message):
+    await message.answer(
+        """
+⚽ Используйте кнопки меню.
 
+Нажмите:
+• Матчи сегодня
+• Расписание
+• Группы
+• Команды
+"""
+    )
+
+
+# ---------------- MAIN ----------------
 
 async def main():
     await dp.start_polling(bot)
