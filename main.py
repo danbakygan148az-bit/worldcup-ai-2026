@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import requests
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
@@ -24,8 +25,8 @@ bot = Bot(
 
 dp = Dispatcher()
 
+BASE_URL = "https://worldcup26.ir/api"
 
-# ---------------- KEYBOARDS ----------------
 
 def language_keyboard():
     return InlineKeyboardMarkup(
@@ -69,8 +70,6 @@ def home_keyboard():
     )
 
 
-# ---------------- START ----------------
-
 @dp.message(CommandStart())
 async def start_handler(message: Message):
     await message.answer(
@@ -99,29 +98,45 @@ async def language_handler(callback: CallbackQuery):
     )
 
 
-# ---------------- TODAY MATCHES ----------------
+def get_today_matches():
+    try:
+        response = requests.get(
+            f"{BASE_URL}/matches",
+            timeout=10
+        )
+
+        matches = response.json()
+
+        text = "⚽ <b>Матчи сегодня</b>\n\n"
+
+        for match in matches[:5]:
+            home = match.get("home_team", "TBD")
+            away = match.get("away_team", "TBD")
+            time = match.get("kickoff", "TBD")
+
+            text += (
+                f"🏟 {home} vs {away}\n"
+                f"🕒 {time}\n\n"
+            )
+
+        return text
+
+    except Exception:
+        return """
+⚠️ Не удалось загрузить матчи.
+
+Попробуйте позже.
+"""
+
 
 @dp.callback_query(F.data == "today_matches")
 async def today_matches(callback: CallbackQuery):
     await callback.answer()
 
-    await callback.message.answer(
-        """
-⚽ <b>Матчи сегодня</b>
+    text = get_today_matches()
 
-🇧🇷 Brazil vs France 🇫🇷
-🕗 20:00
+    await callback.message.answer(text)
 
-🇦🇷 Argentina vs Germany 🇩🇪
-🕙 22:00
-
-🇪🇸 Spain vs Mexico 🇲🇽
-🕕 18:00
-"""
-    )
-
-
-# ---------------- SCHEDULE ----------------
 
 @dp.callback_query(F.data == "schedule")
 async def schedule(callback: CallbackQuery):
@@ -133,18 +148,18 @@ async def schedule(callback: CallbackQuery):
 
 1️⃣ Group Stage
 
-2️⃣ Round of 16
+2️⃣ Round of 32
 
-3️⃣ Quarterfinals
+3️⃣ Round of 16
 
-4️⃣ Semifinals
+4️⃣ Quarterfinals
 
-5️⃣ Final 🏆
+5️⃣ Semifinals
+
+6️⃣ Final 🏆
 """
     )
 
-
-# ---------------- GROUPS ----------------
 
 @dp.callback_query(F.data == "groups")
 async def groups(callback: CallbackQuery):
@@ -152,24 +167,12 @@ async def groups(callback: CallbackQuery):
 
     await callback.message.answer(
         """
-🏆 <b>Группы ЧМ-2026</b>
+🏆 <b>Группы</b>
 
-<b>Group A</b>
-🇧🇷 Brazil
-🇫🇷 France
-🇲🇽 Mexico
-🇯🇵 Japan
-
-<b>Group B</b>
-🇦🇷 Argentina
-🇩🇪 Germany
-🇪🇸 Spain
-🇺🇸 USA
+Данные скоро будут загружаться автоматически.
 """
     )
 
-
-# ---------------- TEAMS ----------------
 
 @dp.callback_query(F.data == "teams")
 async def teams(callback: CallbackQuery):
@@ -179,19 +182,10 @@ async def teams(callback: CallbackQuery):
         """
 🌍 <b>Команды</b>
 
-🇧🇷 Brazil
-🇫🇷 France
-🇦🇷 Argentina
-🇩🇪 Germany
-🇪🇸 Spain
-🇲🇽 Mexico
-🇺🇸 USA
-🇯🇵 Japan
+Список сборных скоро будет загружаться автоматически.
 """
     )
 
-
-# ---------------- LANGUAGE ----------------
 
 @dp.callback_query(F.data == "language")
 async def language(callback: CallbackQuery):
@@ -203,13 +197,11 @@ async def language(callback: CallbackQuery):
     )
 
 
-# ---------------- TEXT ----------------
-
 @dp.message()
 async def text_handler(message: Message):
     await message.answer(
         """
-⚽ Используйте кнопки меню.
+⚽ Используйте меню.
 
 Нажмите:
 • Матчи сегодня
@@ -219,8 +211,6 @@ async def text_handler(message: Message):
 """
     )
 
-
-# ---------------- MAIN ----------------
 
 async def main():
     await dp.start_polling(bot)
