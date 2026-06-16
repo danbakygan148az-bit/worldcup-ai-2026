@@ -101,27 +101,31 @@ async def language_handler(callback: CallbackQuery):
 def get_today_matches():
     try:
         response = requests.get(
-            f"{BASE_URL}/matches",
+            "https://worldcup26.ir/get/games",
             timeout=10
         )
 
         matches = response.json()
 
-        text = "⚽ <b>Матчи сегодня</b>\n\n"
+        text = "⚽ <b>Ближайшие матчи</b>\n\n"
 
         for match in matches[:5]:
-            home = match.get("home_team", "TBD")
-            away = match.get("away_team", "TBD")
-            time = match.get("kickoff", "TBD")
+            home = match.get("home", "TBD")
+            away = match.get("away", "TBD")
+            date = match.get("date", "")
+            time = match.get("time", "")
 
             text += (
-                f"🏟 {home} vs {away}\n"
+                f"🏟 <b>{home}</b> vs <b>{away}</b>\n"
+                f"📅 {date}\n"
                 f"🕒 {time}\n\n"
             )
 
         return text
 
-    except Exception:
+    except Exception as e:
+        print("MATCH API ERROR:", e)
+
         return """
 ⚠️ Не удалось загрузить матчи.
 
