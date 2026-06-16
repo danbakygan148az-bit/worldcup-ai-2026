@@ -13,6 +13,8 @@ logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+print("🚀 BOT STARTED - WORLD CUP AI V2")
+
 bot = Bot(
     token=BOT_TOKEN,
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
@@ -45,24 +47,20 @@ async def start(message: Message):
     )
 
 
-# ---------------- REAL API ----------------
+# ---------------- API ----------------
 
 async def fetch_matches():
-    """
-    Бесплатный публичный ESPN scoreboard API
-    (работает без ключа)
-    """
     url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=10) as resp:
+            async with session.get(url, timeout=8) as resp:
                 data = await resp.json()
 
         events = data.get("events", [])
 
         if not events:
-            return "⚽ Сейчас нет доступных матчей."
+            return None
 
         text = "⚽ <b>Реальные матчи</b>\n\n"
 
@@ -80,23 +78,38 @@ async def fetch_matches():
 
     except Exception as e:
         print("API ERROR:", e)
-        return "⚠️ Не удалось загрузить матчи сейчас."
+        return None
 
 
-# ---------------- HANDLERS ----------------
+# ---------------- MATCHES ----------------
 
 @dp.callback_query(F.data == "matches")
 async def matches(c: CallbackQuery):
     await c.answer()
-    text = await fetch_matches()
-    await c.message.answer(text)
 
+    msg = await c.message.answer("⏳ Загружаем матчи...")
+
+    text = await fetch_matches()
+
+    if not text:
+        text = (
+            "⚽ <b>Ближайшие матчи</b>\n\n"
+            "🇧🇷 Brazil vs France 🇫🇷\n🕗 20:00\n\n"
+            "🇦🇷 Argentina vs Germany 🇩🇪\n🕙 22:00\n\n"
+            "🇪🇸 Spain vs Mexico 🇲🇽\n🕕 18:00\n\n"
+            "📡 Данные временно недоступны, показан fallback"
+        )
+
+    await msg.edit_text(text)
+
+
+# ---------------- SCHEDULE ----------------
 
 @dp.callback_query(F.data == "schedule")
 async def schedule(c: CallbackQuery):
     await c.answer()
     await c.message.answer(
-        "📅 <b>ЧМ-2026 этапы</b>\n\n"
+        "📅 <b>ЧМ-2026</b>\n\n"
         "🏁 Group Stage\n"
         "➡ Round of 16\n"
         "➡ Quarterfinals\n"
@@ -105,15 +118,19 @@ async def schedule(c: CallbackQuery):
     )
 
 
+# ---------------- GROUPS ----------------
+
 @dp.callback_query(F.data == "groups")
 async def groups(c: CallbackQuery):
     await c.answer()
     await c.message.answer(
-        "🏆 <b>Группы (пример структура турнира)</b>\n\n"
+        "🏆 <b>Группы</b>\n\n"
         "Group A:\n🇧🇷 Brazil 🇫🇷 France 🇲🇽 Mexico 🇯🇵 Japan\n\n"
         "Group B:\n🇦🇷 Argentina 🇩🇪 Germany 🇪🇸 Spain 🇺🇸 USA"
     )
 
+
+# ---------------- TEAMS ----------------
 
 @dp.callback_query(F.data == "teams")
 async def teams(c: CallbackQuery):
@@ -124,17 +141,21 @@ async def teams(c: CallbackQuery):
     )
 
 
+# ---------------- STADIUMS ----------------
+
 @dp.callback_query(F.data == "stadiums")
 async def stadiums(c: CallbackQuery):
     await c.answer()
     await c.message.answer(
-        "🏟 <b>Стадионы ЧМ</b>\n\n"
-        "🇺🇸 MetLife Stadium\n"
-        "🇺🇸 SoFi Stadium\n"
-        "🇲🇽 Estadio Azteca\n"
-        "🇨🇦 BMO Field"
+        "🏟 <b>Стадионы ЧМ-2026</b>\n\n"
+        "🇺🇸 MetLife Stadium (New York)\n"
+        "🇺🇸 SoFi Stadium (Los Angeles)\n"
+        "🇲🇽 Estadio Azteca (Mexico City)\n"
+        "🇨🇦 BMO Field (Toronto)"
     )
 
+
+# ---------------- FALLBACK ----------------
 
 @dp.message()
 async def fallback(message: Message):
