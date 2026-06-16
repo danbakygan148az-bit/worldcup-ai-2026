@@ -1,18 +1,13 @@
 import asyncio
 import logging
 import os
-import requests
+import aiohttp
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
-from aiogram.types import (
-    Message,
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-)
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,236 +20,131 @@ bot = Bot(
 
 dp = Dispatcher()
 
-BASE_URL = "https://worldcup26.ir/api"
 
+# ---------------- MENU ----------------
 
-def language_keyboard():
+def menu():
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang_ru")],
-            [InlineKeyboardButton(text="🇬🇧 English", callback_data="lang_en")],
+            [InlineKeyboardButton(text="⚽ Матчи", callback_data="matches")],
+            [InlineKeyboardButton(text="📅 Расписание", callback_data="schedule")],
+            [InlineKeyboardButton(text="🏆 Группы", callback_data="groups")],
+            [InlineKeyboardButton(text="🌍 Команды", callback_data="teams")],
+            [InlineKeyboardButton(text="🏟 Стадионы", callback_data="stadiums")],
         ]
     )
 
 
-def home_keyboard():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="⚽ Матчи сегодня",
-                    callback_data="today_matches",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="📅 Расписание",
-                    callback_data="schedule",
-                ),
-                InlineKeyboardButton(
-                    text="🏆 Группы",
-                    callback_data="groups",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🌍 Команды",
-                    callback_data="teams",
-                ),
-                InlineKeyboardButton(
-                    text="🌐 Language",
-                    callback_data="language",
-                ),
-            ],
-        ]
-    )
-
+# ---------------- START ----------------
 
 @dp.message(CommandStart())
-async def start_handler(message: Message):
+async def start(message: Message):
     await message.answer(
-        """
-🏆 <b>Welcome to WorldCup AI</b>
-
-Ваш помощник по Чемпионату мира 2026 ⚽
-
-Выберите язык:
-""",
-        reply_markup=language_keyboard(),
+        "🏆 <b>World Cup 2026</b>\n\nВыберите раздел:",
+        reply_markup=menu()
     )
 
 
-@dp.callback_query(F.data.startswith("lang_"))
-async def language_handler(callback: CallbackQuery):
-    await callback.message.edit_text(
-        """
-🏆 <b>WorldCup AI</b>
+# ---------------- REAL API ----------------
 
-Добро пожаловать!
+async def fetch_matches():
+    """
+    Бесплатный публичный ESPN scoreboard API
+    (работает без ключа)
+    """
+    url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
 
-Выберите раздел:
-""",
-        reply_markup=home_keyboard(),
-    )
-
-
-def get_today_matches():
     try:
-        response = requests.get(
-            "https://worldcup26.ir/get/games",
-            timeout=10
-        )
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=10) as resp:
+                data = await resp.json()
 
-        matches = response.json()
+        events = data.get("events", [])
 
-        text = "⚽ <b>Ближайшие матчи</b>\n\n"
+        if not events:
+            return "⚽ Сейчас нет доступных матчей."
 
-        for match in matches[:5]:
-            home = match.get("home", "TBD")
-            away = match.get("away", "TBD")
-            date = match.get("date", "")
-            time = match.get("time", "")
+        text = "⚽ <b>Реальные матчи</b>\n\n"
 
-            text += (
-                f"🏟 <b>{home}</b> vs <b>{away}</b>\n"
-                f"📅 {date}\n"
-                f"🕒 {time}\n\n"
-            )
+        for e in events[:5]:
+            comp = e["competitions"][0]
+            teams = comp["competitors"]
+
+            home = teams[0]["team"]["displayName"]
+            away = teams[1]["team"]["displayName"]
+            status = comp["status"]["type"]["description"]
+
+            text += f"🏟 {home} vs {away}\n📌 {status}\n\n"
 
         return text
 
     except Exception as e:
-        print("MATCH API ERROR:", e)
-
-        return """
-⚠️ Не удалось загрузить матчи.
-
-Попробуйте позже.
-"""
+        print("API ERROR:", e)
+        return "⚠️ Не удалось загрузить матчи сейчас."
 
 
-@dp.callback_query(F.data == "today_matches")
-async def today_matches(callback: CallbackQuery):
-    await callback.answer()
+# ---------------- HANDLERS ----------------
 
-    try:
-        response = requests.get(
-            "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard",
-            timeout=10
-        )
-
-        data = response.json()
-        events = data.get("events", [])
-
-        if not events:
-            await callback.message.answer(
-                "⚽ Сейчас матчей нет."
-            )
-            return
-
-        text = "⚽ <b>Ближайшие матчи</b>\n\n"
-
-        for match in events[:8]:
-            competition = match["competitions"][0]
-            competitors = competition["competitors"]
-
-            home = competitors[0]["team"]["displayName"]
-            away = competitors[1]["team"]["displayName"]
-
-            status = competition["status"]["type"]["description"]
-
-            text += (
-                f"🏟 <b>{home}</b> vs <b>{away}</b>\n"
-                f"📌 {status}\n\n"
-            )
-
-        await callback.message.answer(text)
-
-    except Exception as e:
-        print("ESPN ERROR:", e)
-
-        await callback.message.answer(
-            "⚠️ Не удалось загрузить реальные матчи."
-        )
+@dp.callback_query(F.data == "matches")
+async def matches(c: CallbackQuery):
+    await c.answer()
+    text = await fetch_matches()
+    await c.message.answer(text)
 
 
 @dp.callback_query(F.data == "schedule")
-async def schedule(callback: CallbackQuery):
-    await callback.answer()
-
-    await callback.message.answer(
-        """
-📅 <b>Расписание ЧМ-2026</b>
-
-1️⃣ Group Stage
-
-2️⃣ Round of 32
-
-3️⃣ Round of 16
-
-4️⃣ Quarterfinals
-
-5️⃣ Semifinals
-
-6️⃣ Final 🏆
-"""
+async def schedule(c: CallbackQuery):
+    await c.answer()
+    await c.message.answer(
+        "📅 <b>ЧМ-2026 этапы</b>\n\n"
+        "🏁 Group Stage\n"
+        "➡ Round of 16\n"
+        "➡ Quarterfinals\n"
+        "➡ Semifinals\n"
+        "🏆 Final"
     )
 
 
 @dp.callback_query(F.data == "groups")
-async def groups(callback: CallbackQuery):
-    await callback.answer()
-
-    await callback.message.answer(
-        """
-🏆 <b>Группы</b>
-
-Данные скоро будут загружаться автоматически.
-"""
+async def groups(c: CallbackQuery):
+    await c.answer()
+    await c.message.answer(
+        "🏆 <b>Группы (пример структура турнира)</b>\n\n"
+        "Group A:\n🇧🇷 Brazil 🇫🇷 France 🇲🇽 Mexico 🇯🇵 Japan\n\n"
+        "Group B:\n🇦🇷 Argentina 🇩🇪 Germany 🇪🇸 Spain 🇺🇸 USA"
     )
 
 
 @dp.callback_query(F.data == "teams")
-async def teams(callback: CallbackQuery):
-    await callback.answer()
-
-    await callback.message.answer(
-        """
-🌍 <b>Команды</b>
-
-Список сборных скоро будет загружаться автоматически.
-"""
+async def teams(c: CallbackQuery):
+    await c.answer()
+    await c.message.answer(
+        "🌍 <b>Команды</b>\n\n"
+        "🇧🇷 Brazil\n🇫🇷 France\n🇦🇷 Argentina\n🇩🇪 Germany\n🇪🇸 Spain\n🇲🇽 Mexico\n🇺🇸 USA\n🇯🇵 Japan"
     )
 
 
-@dp.callback_query(F.data == "language")
-async def language(callback: CallbackQuery):
-    await callback.answer()
-
-    await callback.message.answer(
-        "🌐 Выберите язык:",
-        reply_markup=language_keyboard(),
+@dp.callback_query(F.data == "stadiums")
+async def stadiums(c: CallbackQuery):
+    await c.answer()
+    await c.message.answer(
+        "🏟 <b>Стадионы ЧМ</b>\n\n"
+        "🇺🇸 MetLife Stadium\n"
+        "🇺🇸 SoFi Stadium\n"
+        "🇲🇽 Estadio Azteca\n"
+        "🇨🇦 BMO Field"
     )
 
 
 @dp.message()
-async def text_handler(message: Message):
-    await message.answer(
-        """
-⚽ Используйте меню.
+async def fallback(message: Message):
+    await message.answer("Используй меню 👇", reply_markup=menu())
 
-Нажмите:
-• Матчи сегодня
-• Расписание
-• Группы
-• Команды
-"""
-    )
 
+# ---------------- RUN ----------------
 
 async def main():
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
