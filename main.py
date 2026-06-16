@@ -137,9 +137,45 @@ def get_today_matches():
 async def today_matches(callback: CallbackQuery):
     await callback.answer()
 
-    text = get_today_matches()
+    try:
+        response = requests.get(
+            "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard",
+            timeout=10
+        )
 
-    await callback.message.answer(text)
+        data = response.json()
+        events = data.get("events", [])
+
+        if not events:
+            await callback.message.answer(
+                "⚽ Сейчас матчей нет."
+            )
+            return
+
+        text = "⚽ <b>Ближайшие матчи</b>\n\n"
+
+        for match in events[:8]:
+            competition = match["competitions"][0]
+            competitors = competition["competitors"]
+
+            home = competitors[0]["team"]["displayName"]
+            away = competitors[1]["team"]["displayName"]
+
+            status = competition["status"]["type"]["description"]
+
+            text += (
+                f"🏟 <b>{home}</b> vs <b>{away}</b>\n"
+                f"📌 {status}\n\n"
+            )
+
+        await callback.message.answer(text)
+
+    except Exception as e:
+        print("ESPN ERROR:", e)
+
+        await callback.message.answer(
+            "⚠️ Не удалось загрузить реальные матчи."
+        )
 
 
 @dp.callback_query(F.data == "schedule")
