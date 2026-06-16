@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-print("🚀 WORLD CUP BOT V3 STARTED")
+print("🚀 WORLD CUP BOT FIXED API VERSION")
 
 bot = Bot(
     token=BOT_TOKEN,
@@ -49,7 +49,7 @@ async def start(message: Message):
     )
 
 
-# ---------------- API HELPERS ----------------
+# ---------------- HTTP ----------------
 
 async def fetch(url):
     try:
@@ -72,28 +72,28 @@ async def matches(c: CallbackQuery):
     data = await fetch(f"{API}/games")
 
     if not data:
-        await msg.edit_text("⚠️ Не удалось загрузить матчи")
+        await msg.edit_text("⚠️ API недоступен")
         return
 
-    text = "⚽ <b>Матчи сегодня</b>\n\n"
+    text = "⚽ <b>Матчи</b>\n\n"
 
-    for m in data[:10]:
+    for m in data[:12]:
         home = m.get("home", "TBD")
         away = m.get("away", "TBD")
         score = m.get("score", "")
         status = m.get("status", "")
 
         if score:
-            line = f"🏟 {home} {score} {away}"
+            text += f"🏟 {home} {score} {away}\n"
         else:
-            line = f"🏟 {home} vs {away}"
+            text += f"🏟 {home} vs {away}\n"
 
-        text += f"{line}\n📌 {status}\n\n"
+        text += f"📌 {status}\n\n"
 
     await msg.edit_text(text)
 
 
-# ---------------- SCHEDULE (24h) ----------------
+# ---------------- SCHEDULE ----------------
 
 @dp.callback_query(F.data == "schedule")
 async def schedule(c: CallbackQuery):
@@ -102,15 +102,15 @@ async def schedule(c: CallbackQuery):
     data = await fetch(f"{API}/schedule")
 
     if not data:
-        await c.message.answer("⚠️ Ошибка загрузки расписания")
+        await c.message.answer("⚠️ Ошибка расписания")
         return
 
-    text = "📅 <b>Ближайшие 24 часа</b>\n\n"
+    text = "📅 <b>Ближайшие матчи (24h)</b>\n\n"
 
-    for m in data[:10]:
+    for m in data[:12]:
         text += (
             f"🏟 {m.get('home')} vs {m.get('away')}\n"
-            f"🕒 {m.get('time')} {m.get('date')}\n\n"
+            f"🕒 {m.get('date')} {m.get('time')}\n\n"
         )
 
     await c.message.answer(text)
@@ -122,39 +122,45 @@ async def schedule(c: CallbackQuery):
 async def groups(c: CallbackQuery):
     await c.answer()
 
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="Group A", callback_data="g_A"),
-             InlineKeyboardButton(text="Group B", callback_data="g_B")],
-            [InlineKeyboardButton(text="Group C", callback_data="g_C"),
-             InlineKeyboardButton(text="Group D", callback_data="g_D")],
-        ]
-    )
+    data = await fetch(f"{API}/groups")
 
-    await c.message.answer("🏆 Выберите группу:", reply_markup=kb)
+    if not data:
+        await c.message.answer("⚠️ Ошибка групп")
+        return
+
+    kb = []
+
+    for g in data:
+        kb.append([InlineKeyboardButton(text=f"Group {g['name']}", callback_data=f"group_{g['name']}")])
+
+    await c.message.answer("🏆 Выберите группу:", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb))
 
 
-@dp.callback_query(F.data.startswith("g_"))
+@dp.callback_query(F.data.startswith("group_"))
 async def group_detail(c: CallbackQuery):
     await c.answer()
 
-    group = c.data.split("_")[1]
+    group_name = c.data.split("_")[1]
 
-    data = await fetch(f"{API}/groups/{group}")
+    data = await fetch(f"{API}/groups/{group_name}")
 
     if not data:
-        await c.message.answer("⚠️ Ошибка загрузки группы")
+        await c.message.answer("⚠️ Ошибка группы")
         return
 
-    text = f"🏆 <b>Group {group}</b>\n\n"
+    text = f"🏆 <b>Group {group_name}</b>\n\n"
 
     for team in data.get("teams", []):
         text += f"🌍 {team}\n"
 
-    text += "\n⚽ Matches:\n"
+    text += "\n⚽ Matches:\n\n"
 
     for m in data.get("matches", []):
-        text += f"{m['home']} {m.get('score','')} {m['away']}\n"
+        home = m.get("home")
+        away = m.get("away")
+        score = m.get("score", "")
+
+        text += f"{home} {score} {away}\n"
 
     await c.message.answer(text)
 
@@ -168,7 +174,7 @@ async def teams(c: CallbackQuery):
     data = await fetch(f"{API}/teams")
 
     if not data:
-        await c.message.answer("⚠️ Ошибка загрузки команд")
+        await c.message.answer("⚠️ Ошибка команд")
         return
 
     text = "🌍 <b>Все команды</b>\n\n"
@@ -188,13 +194,13 @@ async def stadiums(c: CallbackQuery):
     data = await fetch(f"{API}/stadiums")
 
     if not data:
-        await c.message.answer("⚠️ Ошибка загрузки стадионов")
+        await c.message.answer("⚠️ Ошибка стадионов")
         return
 
     text = "🏟 <b>Стадионы</b>\n\n"
 
     for s in data:
-        text += f"{s['name']} — {s['capacity']}\n"
+        text += f"{s['name']} — {s['capacity']} seats\n"
 
     await c.message.answer(text)
 
@@ -210,7 +216,6 @@ async def fallback(message: Message):
 
 async def main():
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
