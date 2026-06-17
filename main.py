@@ -70,9 +70,9 @@ def menu():
         [InlineKeyboardButton(text="🏟 Стадионы", callback_data="stadiums")],
     ])
 
-def back_menu():  # назад в главное меню
+def back_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="back_to_main")]
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
     ])
 
 def schedule_menu():
@@ -80,6 +80,12 @@ def schedule_menu():
         [InlineKeyboardButton(text="Завтра", callback_data="schedule_tomorrow")],
         [InlineKeyboardButton(text="Ближайшие 3 дня", callback_data="schedule_3days")],
         [InlineKeyboardButton(text="На неделю", callback_data="schedule_week")],
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
+    ])
+
+def schedule_back_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад в расписание", callback_data="schedule")],
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
     ])
 
@@ -145,6 +151,35 @@ async def get_matches_by_date(days_offset: int = 0):
         logging.error(f"API Error: {e}")
         return "⚠️ Не удалось загрузить расписание. Попробуй позже."
 
+# ==================== СТАДИОНЫ ====================
+async def get_stadiums():
+    text = "🏟 <b>Стадионы чемпионата мира 2026</b>\n\n"
+
+    text += "🇨🇦 <b>Канада (красные)</b>\n"
+    text += "• BMO Field (Торонто) — 43 000 мест\n"
+    text += "• BC Place (Ванкувер) — 52 500 мест\n\n"
+
+    text += "🇲🇽 <b>Мексика (зелёные)</b>\n"
+    text += "• Estadio Azteca (Мехико) — 82 000 мест\n"
+    text += "• Estadio Akron (Гвадалахара) — 46 000 мест\n"
+    text += "• Estadio BBVA (Монтеррей) — 53 500 мест\n\n"
+
+    text += "🇺🇸 <b>США (синие)</b>\n"
+    text += "• MetLife Stadium (Нью-Йорк / Нью-Джерси) — 82 500 мест (финал)\n"
+    text += "• SoFi Stadium (Лос-Анджелес) — 70 000 мест\n"
+    text += "• AT&T Stadium (Даллас) — 80 000 мест\n"
+    text += "• Mercedes-Benz Stadium (Атланта) — 71 000 мест\n"
+    text += "• NRG Stadium (Хьюстон) — 72 000 мест\n"
+    text += "• Hard Rock Stadium (Майами) — 65 000 мест\n"
+    text += "• Lumen Field (Сиэтл) — 69 000 мест\n"
+    text += "• Levi's Stadium (Сан-Франциско) — 68 500 мест\n"
+    text += "• Lincoln Financial Field (Филадельфия) — 69 000 мест\n"
+    text += "• GEHA Field at Arrowhead Stadium (Канзас-Сити) — 76 000 мест\n"
+    text += "• Gillette Stadium (Бостон) — 65 000 мест\n\n"
+
+    text += "Всего будет использовано 16 стадионов."
+    return text
+
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
@@ -166,7 +201,7 @@ async def schedule_tomorrow(c: CallbackQuery):
     await c.answer()
     msg = await c.message.edit_text("⏳ Загружаем матчи на завтра...")
     text = await get_matches_by_date(1)
-    await msg.edit_text(text, reply_markup=back_menu())   # назад в расписание
+    await msg.edit_text(text, reply_markup=schedule_back_menu())
 
 @dp.callback_query(F.data == "schedule_3days")
 async def schedule_3days(c: CallbackQuery):
@@ -176,7 +211,7 @@ async def schedule_3days(c: CallbackQuery):
     for i in range(3):
         day_text = await get_matches_by_date(i)
         text += day_text + "\n" + "—" * 35 + "\n\n"
-    await msg.edit_text(text[:4000], reply_markup=back_menu())  # назад в расписание
+    await msg.edit_text(text[:4000], reply_markup=schedule_back_menu())
 
 @dp.callback_query(F.data == "schedule_week")
 async def schedule_week(c: CallbackQuery):
@@ -186,15 +221,13 @@ async def schedule_week(c: CallbackQuery):
     for i in range(7):
         day_text = await get_matches_by_date(i)
         text += day_text + "\n" + "—" * 35 + "\n\n"
-    await msg.edit_text(text[:4000], reply_markup=back_menu())  # назад в расписание
+    await msg.edit_text(text[:4000], reply_markup=schedule_back_menu())
 
-@dp.callback_query(F.data == "back_to_main")
-async def back_to_main(c: CallbackQuery):
+@dp.callback_query(F.data == "stadiums")
+async def stadiums_handler(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text(
-        "🏆 <b>World Cup 2026 Bot</b>\n\nВыберите раздел:",
-        reply_markup=menu()
-    )
+    text = await get_stadiums()
+    await c.message.edit_text(text, reply_markup=back_menu())
 
 @dp.callback_query(F.data == "teams")
 async def teams_handler(c: CallbackQuery):
@@ -204,10 +237,18 @@ async def teams_handler(c: CallbackQuery):
         text += f"• {team}\n"
     await c.message.edit_text(text, reply_markup=back_menu())
 
-@dp.callback_query(F.data == "groups" | F.data == "stadiums")
-async def placeholder(c: CallbackQuery):
+@dp.callback_query(F.data == "groups")
+async def groups_handler(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text("⏳ Этот раздел скоро будет готов!", reply_markup=back_menu())
+    await c.message.edit_text("🏆 Группы будут добавлены позже.", reply_markup=back_menu())
+
+@dp.callback_query(F.data == "back_to_main")
+async def back_to_main(c: CallbackQuery):
+    await c.answer()
+    await c.message.edit_text(
+        "🏆 <b>World Cup 2026 Bot</b>\n\nВыберите раздел:",
+        reply_markup=menu()
+    )
 
 @dp.message(CommandStart())
 async def start(message: Message):
