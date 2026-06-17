@@ -27,6 +27,12 @@ dp = Dispatcher()
 # ---------------- MENU ----------------
 
 def menu():
+    def back_menu():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back")]
+        ]
+    )
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="⚽ Матчи", callback_data="matches")],
@@ -123,7 +129,10 @@ async def matches(c: CallbackQuery):
 
     text = await get_matches()
 
-    await msg.edit_text(text)
+    await msg.edit_text(
+        text,
+        reply_markup=back_menu()
+    )
 
 
 @dp.callback_query(F.data == "schedule")
@@ -169,7 +178,15 @@ async def stadiums(c: CallbackQuery):
         "MetLife Stadium\nSoFi Stadium\nEstadio Azteca\nBMO Field"
     )
 
+@dp.callback_query(F.data == "back")
+async def back(c: CallbackQuery):
+    await c.answer()
 
+    await c.message.edit_text(
+        "🏆 World Cup Bot\nВыберите раздел:",
+        reply_markup=menu()
+    )
+    
 @dp.message()
 async def fallback(message: Message):
     await message.answer("Используй меню 👇", reply_markup=menu())
