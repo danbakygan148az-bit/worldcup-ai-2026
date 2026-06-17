@@ -35,7 +35,7 @@ TEAM_NAMES = {
     "Curacao": "Кюрасао", "Haiti": "Гаити", "Panama": "Панама",
     "Argentina": "Аргентина", "Brazil": "Бразилия", "Colombia": "Колумбия",
     "Ecuador": "Эквадор", "Paraguay": "Парагвай", "Uruguay": "Уругвай",
-    "Austria": "Австрия", "Belgium": "Бельгия", "Bosnia and Herzegovina": "Босния и Герцеговина",
+    "Austria": "Австрия", "Belgium": "Бельгия", "Bosnia-Herzegovina": "Босния и Герцеговина",
     "Croatia": "Хорватия", "Czech Republic": "Чехия", "Czechia": "Чехия",
     "England": "Англия", "France": "Франция", "Germany": "Германия",
     "Netherlands": "Нидерланды", "Norway": "Норвегия", "Portugal": "Португалия",
