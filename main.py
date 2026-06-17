@@ -76,17 +76,17 @@ async def get_matches():
             raw_date = e.get("date", "")
 
             try:
-            dt = datetime.fromisoformat(
-                raw_date.replace("Z", "+00:00")
-            )
-        
-            dt = dt + timedelta(hours=3)
-        
-            match_time = dt.strftime("%d.%m.%Y %H:%M МСК")
-        
-        except Exception:
-            match_time = raw_date
-
+                dt = datetime.fromisoformat(
+                    raw_date.replace("Z", "+00:00")
+                )
+            
+                dt = dt + timedelta(hours=3)
+            
+                match_time = dt.strftime("%d.%m.%Y %H:%M МСК")
+            
+            except Exception:
+                match_time = raw_date
+            
             score = ""
 
             try:
