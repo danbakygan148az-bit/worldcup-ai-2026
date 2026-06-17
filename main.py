@@ -89,7 +89,7 @@ def schedule_back_menu():
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
     ])
 
-# ==================== ФУНКЦИЯ ЗАГРУЗКИ МАТЧЕЙ ====================
+# ==================== ФУНКЦИЯ ЗАГРУЗКИ МАТЧЕЙ С ГОЛАМИ ====================
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
     date_str = target_date.strftime("%Y%m%d")
@@ -108,9 +108,8 @@ async def get_matches_by_date(days_offset: int = 0):
             return f"⚽ На {target_date.strftime('%d.%m.%Y')} матчей не найдено."
 
         text = f"📅 <b>Матчи — {target_date.strftime('%d.%m.%Y')}</b>\n\n"
-        count = 0
-
-        for e in events[:20]:
+        
+        for e in events[:15]:
             try:
                 comp = e["competitions"][0]
                 teams = comp["competitors"]
@@ -140,12 +139,28 @@ async def get_matches_by_date(days_offset: int = 0):
                 except:
                     pass
 
-                text += f"<b>{home} — {away}</b>{score}\n⏰ {match_time} МСК\n📍 {venue}\n📌 {status}\n\n"
-                count += 1
+                # Информация о голах
+                goals_text = ""
+                try:
+                    for t in teams:
+                        team_name = ru_team(t["team"]["displayName"])
+                        stats = t.get("statistics", []) or t.get("leaders", [])
+                        for stat in stats:
+                            if isinstance(stat, dict) and ("goal" in stat.get("name", "").lower() or stat.get("name") == "goals"):
+                                value = stat.get("displayValue") or stat.get("value")
+                                if value and str(value) not in ("0", "None"):
+                                    goals_text += f"⚽ {team_name}: {value}\n"
+                except:
+                    pass
+
+                text += f"<b>{home} — {away}</b>{score}\n⏰ {match_time} МСК\n📍 {venue}\n📌 {status}\n"
+                if goals_text:
+                    text += goals_text
+                text += "\n"
             except:
                 continue
 
-        return text if count > 0 else f"⚽ На {target_date.strftime('%d.%m')} матчей пока нет."
+        return text
 
     except Exception as e:
         logging.error(f"API Error: {e}")
@@ -154,18 +169,15 @@ async def get_matches_by_date(days_offset: int = 0):
 # ==================== СТАДИОНЫ ====================
 async def get_stadiums():
     text = "🏟 <b>Стадионы чемпионата мира 2026</b>\n\n"
-
-    text += "🇨🇦 <b>Канада (красные)</b>\n"
+    text += "🇨🇦 <b>Канада</b>\n"
     text += "• BMO Field (Торонто) — 43 000 мест\n"
     text += "• BC Place (Ванкувер) — 52 500 мест\n\n"
-
-    text += "🇲🇽 <b>Мексика (зелёные)</b>\n"
+    text += "🇲🇽 <b>Мексика</b>\n"
     text += "• Estadio Azteca (Мехико) — 82 000 мест\n"
     text += "• Estadio Akron (Гвадалахара) — 46 000 мест\n"
     text += "• Estadio BBVA (Монтеррей) — 53 500 мест\n\n"
-
-    text += "🇺🇸 <b>США (синие)</b>\n"
-    text += "• MetLife Stadium (Нью-Йорк / Нью-Джерси) — 82 500 мест (финал)\n"
+    text += "🇺🇸 <b>США</b>\n"
+    text += "• MetLife Stadium (Нью-Йорк) — 82 500 мест (финал)\n"
     text += "• SoFi Stadium (Лос-Анджелес) — 70 000 мест\n"
     text += "• AT&T Stadium (Даллас) — 80 000 мест\n"
     text += "• Mercedes-Benz Stadium (Атланта) — 71 000 мест\n"
@@ -176,8 +188,7 @@ async def get_stadiums():
     text += "• Lincoln Financial Field (Филадельфия) — 69 000 мест\n"
     text += "• GEHA Field at Arrowhead Stadium (Канзас-Сити) — 76 000 мест\n"
     text += "• Gillette Stadium (Бостон) — 65 000 мест\n\n"
-
-    text += "Всего будет использовано 16 стадионов."
+    text += "Всего 16 стадионов в трёх странах."
     return text
 
 # ==================== ХЕНДЛЕРЫ ====================
