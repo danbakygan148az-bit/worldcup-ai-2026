@@ -23,6 +23,70 @@ bot = Bot(
 
 dp = Dispatcher()
 
+TEAM_NAMES = {
+    "Canada": "Канада",
+    "Mexico": "Мексика",
+    "United States": "США",
+    "USA": "США",
+
+    "Japan": "Япония",
+    "New Zealand": "Новая Зеландия",
+    "Australia": "Австралия",
+    "Iraq": "Ирак",
+    "Iran": "Иран",
+    "Jordan": "Иордания",
+    "South Korea": "Южная Корея",
+    "Korea Republic": "Южная Корея",
+    "Qatar": "Катар",
+    "Saudi Arabia": "Саудовская Аравия",
+    "Uzbekistan": "Узбекистан",
+
+    "Algeria": "Алжир",
+    "Cape Verde": "Кабо-Верде",
+    "DR Congo": "ДР Конго",
+    "Congo DR": "ДР Конго",
+    "Ivory Coast": "Кот-д'Ивуар",
+    "Côte d'Ivoire": "Кот-д'Ивуар",
+    "Egypt": "Египет",
+    "Ghana": "Гана",
+    "Morocco": "Марокко",
+    "Senegal": "Сенегал",
+    "South Africa": "ЮАР",
+    "Tunisia": "Тунис",
+
+    "Curacao": "Кюрасао",
+    "Haiti": "Гаити",
+    "Panama": "Панама",
+
+    "Argentina": "Аргентина",
+    "Brazil": "Бразилия",
+    "Colombia": "Колумбия",
+    "Ecuador": "Эквадор",
+    "Paraguay": "Парагвай",
+    "Uruguay": "Уругвай",
+
+    "Austria": "Австрия",
+    "Belgium": "Бельгия",
+    "Bosnia and Herzegovina": "Босния и Герцеговина",
+    "Croatia": "Хорватия",
+    "Czech Republic": "Чехия",
+    "Czechia": "Чехия",
+    "England": "Англия",
+    "France": "Франция",
+    "Germany": "Германия",
+    "Netherlands": "Нидерланды",
+    "Norway": "Норвегия",
+    "Portugal": "Португалия",
+    "Scotland": "Шотландия",
+    "Spain": "Испания",
+    "Sweden": "Швеция",
+    "Switzerland": "Швейцария",
+    "Turkey": "Турция",
+    "Türkiye": "Турция",
+}
+
+def ru_team(name):
+    return TEAM_NAMES.get(name, name)
 
 # ---------------- MENU ----------------
 
@@ -66,9 +130,14 @@ async def get_matches():
             comp = e["competitions"][0]
             teams = comp["competitors"]
 
-            home = teams[0]["team"]["displayName"]
-            away = teams[1]["team"]["displayName"]
-
+            home = ru_team(
+                teams[0]["team"]["displayName"]
+            )
+            
+            away = ru_team(
+                teams[1]["team"]["displayName"]
+            )
+            
             status = comp["status"]["type"]["shortDetail"]
 
             venue = "Неизвестно"
