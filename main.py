@@ -60,36 +60,47 @@ async def get_matches():
 
         text = "⚽ <b>Матчи</b>\n\n"
 
-       for e in events[:8]:
-    comp = e["competitions"][0]
+        for e in events[:8]:
+            comp = e["competitions"][0]
+            teams = comp["competitors"]
 
-    teams = comp["competitors"]
+            home = teams[0]["team"]["displayName"]
+            away = teams[1]["team"]["displayName"]
 
-    home = teams[0]["team"]["displayName"]
-    away = teams[1]["team"]["displayName"]
+            status = comp["status"]["type"]["shortDetail"]
 
-    status = comp["status"]["type"]["shortDetail"]
+            venue = "Неизвестно"
+            if comp.get("venue"):
+                venue = comp["venue"].get("fullName", "Неизвестно")
 
-    venue = "Неизвестно"
-    if comp.get("venue"):
-        venue = comp["venue"].get("fullName", "Неизвестно")
+            raw_date = e.get("date", "")
 
-    raw_date = e.get("date", "")
+            try:
+                dt = datetime.fromisoformat(
+                    raw_date.replace("Z", "+00:00")
+                )
+                match_time = dt.strftime("%d.%m.%Y %H:%M UTC")
+            except Exception:
+                match_time = raw_date
 
-try:
-    dt = datetime.fromisoformat(
-        raw_date.replace("Z", "+00:00")
-    )
-    match_time = dt.strftime("%d.%m.%Y %H:%M UTC")
-except:
-    match_time = raw_date
+            score = ""
 
-    text += (
-        f"🏟 <b>{home} vs {away}</b>\n"
-        f"⏰ {match_time}\n"
-        f"📍 {venue}\n"
-        f"📌 {status}\n\n"
-    )
+            try:
+                home_score = teams[0].get("score", "")
+                away_score = teams[1].get("score", "")
+
+                if home_score != "" and away_score != "":
+                    score = f"\n⚽ Счёт: {home_score}-{away_score}"
+            except Exception:
+                pass
+
+            text += (
+                f"🏟 <b>{home} vs {away}</b>\n"
+                f"⏰ {match_time}\n"
+                f"📍 {venue}\n"
+                f"{score}\n"
+                f"📌 {status}\n\n"
+            )
 
         return text
 
