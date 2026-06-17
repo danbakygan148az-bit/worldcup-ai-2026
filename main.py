@@ -35,7 +35,7 @@ TEAM_NAMES = {
     "Curacao": "Кюрасао", "Haiti": "Гаити", "Panama": "Панама",
     "Argentina": "Аргентина", "Brazil": "Бразилия", "Colombia": "Колумбия",
     "Ecuador": "Эквадор", "Paraguay": "Парагвай", "Uruguay": "Уругвай",
-    "Austria": "Австрия", "Belgium": "Бельгия", "Bosnia-Herzegovina": "Босния и Герцеговина",
+    "Austria": "Австрия", "Belgium": "Бельгия", "Bosnia and Herzegovina": "Босния и Герцеговина",
     "Croatia": "Хорватия", "Czech Republic": "Чехия", "Czechia": "Чехия",
     "England": "Англия", "France": "Франция", "Germany": "Германия",
     "Netherlands": "Нидерланды", "Norway": "Норвегия", "Portugal": "Португалия",
@@ -70,19 +70,20 @@ def menu():
         [InlineKeyboardButton(text="🏟 Стадионы", callback_data="stadiums")],
     ])
 
-def back_menu():
+def back_menu():  # назад в главное меню
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="back")]
+        [InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="back_to_main")]
     ])
 
 def schedule_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Завтра", callback_data="schedule_tomorrow")],
+        [InlineKeyboardButton(text="Ближайшие 3 дня", callback_data="schedule_3days")],
         [InlineKeyboardButton(text="На неделю", callback_data="schedule_week")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="back")],
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
     ])
 
-# ==================== УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ====================
+# ==================== ФУНКЦИЯ ЗАГРУЗКИ МАТЧЕЙ ====================
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
     date_str = target_date.strftime("%Y%m%d")
@@ -142,7 +143,7 @@ async def get_matches_by_date(days_offset: int = 0):
 
     except Exception as e:
         logging.error(f"API Error: {e}")
-        return "⚠️ Не удалось загрузить расписание."
+        return "⚠️ Не удалось загрузить расписание. Попробуй позже."
 
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
@@ -165,20 +166,35 @@ async def schedule_tomorrow(c: CallbackQuery):
     await c.answer()
     msg = await c.message.edit_text("⏳ Загружаем матчи на завтра...")
     text = await get_matches_by_date(1)
-    await msg.edit_text(text, reply_markup=back_menu())
+    await msg.edit_text(text, reply_markup=back_menu())   # назад в расписание
+
+@dp.callback_query(F.data == "schedule_3days")
+async def schedule_3days(c: CallbackQuery):
+    await c.answer()
+    msg = await c.message.edit_text("⏳ Загружаем ближайшие 3 дня...")
+    text = "📅 <b>Ближайшие 3 дня</b>\n\n"
+    for i in range(3):
+        day_text = await get_matches_by_date(i)
+        text += day_text + "\n" + "—" * 35 + "\n\n"
+    await msg.edit_text(text[:4000], reply_markup=back_menu())  # назад в расписание
 
 @dp.callback_query(F.data == "schedule_week")
 async def schedule_week(c: CallbackQuery):
     await c.answer()
     msg = await c.message.edit_text("⏳ Загружаем расписание на неделю...")
-    
     text = "📅 <b>Расписание на неделю (7 дней)</b>\n\n"
     for i in range(7):
-        day_text = await get_matches_by_date(days_offset=i)
+        day_text = await get_matches_by_date(i)
         text += day_text + "\n" + "—" * 35 + "\n\n"
-    
-    # Обрезаем, если сообщение слишком длинное
-    await msg.edit_text(text[:4000], reply_markup=back_menu())
+    await msg.edit_text(text[:4000], reply_markup=back_menu())  # назад в расписание
+
+@dp.callback_query(F.data == "back_to_main")
+async def back_to_main(c: CallbackQuery):
+    await c.answer()
+    await c.message.edit_text(
+        "🏆 <b>World Cup 2026 Bot</b>\n\nВыберите раздел:",
+        reply_markup=menu()
+    )
 
 @dp.callback_query(F.data == "teams")
 async def teams_handler(c: CallbackQuery):
@@ -188,26 +204,10 @@ async def teams_handler(c: CallbackQuery):
         text += f"• {team}\n"
     await c.message.edit_text(text, reply_markup=back_menu())
 
-@dp.callback_query(F.data == "groups")
-async def groups_handler(c: CallbackQuery):
+@dp.callback_query(F.data == "groups" | F.data == "stadiums")
+async def placeholder(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text("🏆 Группы будут добавлены позже.", reply_markup=back_menu())
-
-@dp.callback_query(F.data == "stadiums")
-async def stadiums_handler(c: CallbackQuery):
-    await c.answer()
-    await c.message.edit_text(
-        "🏟 <b>Стадионы ЧМ-2026</b>\n\n• MetLife Stadium\n• SoFi Stadium\n• Estadio Azteca\nи другие...",
-        reply_markup=back_menu()
-    )
-
-@dp.callback_query(F.data == "back")
-async def back_handler(c: CallbackQuery):
-    await c.answer()
-    await c.message.edit_text(
-        "🏆 <b>World Cup 2026 Bot</b>\n\nВыберите раздел:",
-        reply_markup=menu()
-    )
+    await c.message.edit_text("⏳ Этот раздел скоро будет готов!", reply_markup=back_menu())
 
 @dp.message(CommandStart())
 async def start(message: Message):
