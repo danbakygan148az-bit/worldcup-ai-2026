@@ -8,7 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logging.basicConfig(level=logging.INFO)
 
@@ -76,12 +76,16 @@ async def get_matches():
             raw_date = e.get("date", "")
 
             try:
-                dt = datetime.fromisoformat(
-                    raw_date.replace("Z", "+00:00")
-                )
-                match_time = dt.strftime("%d.%m.%Y %H:%M UTC")
-            except Exception:
-                match_time = raw_date
+            dt = datetime.fromisoformat(
+                raw_date.replace("Z", "+00:00")
+            )
+        
+            dt = dt + timedelta(hours=3)
+        
+            match_time = dt.strftime("%d.%m.%Y %H:%M МСК")
+        
+        except Exception:
+            match_time = raw_date
 
             score = ""
 
