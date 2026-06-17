@@ -27,12 +27,6 @@ dp = Dispatcher()
 # ---------------- MENU ----------------
 
 def menu():
-    def back_menu():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back")]
-        ]
-    )
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="⚽ Матчи", callback_data="matches")],
@@ -44,10 +38,12 @@ def menu():
     )
 
 
-@dp.message(CommandStart())
-async def start(message: Message):
-    await message.answer("🏆 World Cup Bot\nВыберите раздел:", reply_markup=menu())
-
+def back_menu():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back")]
+        ]
+    )
 
 # ---------------- SAFE API (ESPN REAL) ----------------
 
