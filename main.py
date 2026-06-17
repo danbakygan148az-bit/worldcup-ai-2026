@@ -89,7 +89,7 @@ def schedule_back_menu():
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
     ])
 
-# ==================== ФУНКЦИЯ ЗАГРУЗКИ МАТЧЕЙ С ГОЛАМИ ====================
+# ==================== УЛУЧШЕННАЯ ФУНКЦИЯ МАТЧЕЙ ====================
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
     date_str = target_date.strftime("%Y%m%d")
@@ -114,8 +114,10 @@ async def get_matches_by_date(days_offset: int = 0):
                 comp = e["competitions"][0]
                 teams = comp["competitors"]
 
-                home = ru_team(teams[0]["team"]["displayName"])
-                away = ru_team(teams[1]["team"]["displayName"])
+                home_name = teams[0]["team"]["displayName"]
+                away_name = teams[1]["team"]["displayName"]
+                home = ru_team(home_name)
+                away = ru_team(away_name)
 
                 status = comp.get("status", {}).get("type", {}).get("shortDetail", "—")
                 venue = comp.get("venue", {}).get("fullName", "—")
@@ -130,33 +132,39 @@ async def get_matches_by_date(days_offset: int = 0):
                 except:
                     pass
 
-                score = ""
+                score = "—"
                 try:
                     h = teams[0].get("score", "")
                     a = teams[1].get("score", "")
                     if str(h) not in ("", "None", None) and str(a) not in ("", "None", None):
-                        score = f" <b>{h}–{a}</b>"
+                        score = f"<b>{h}–{a}</b>"
                 except:
                     pass
 
-                # Информация о голах
+                # Красивый вывод голей (попытка вытащить игроков и минуты)
                 goals_text = ""
                 try:
                     for t in teams:
                         team_name = ru_team(t["team"]["displayName"])
-                        stats = t.get("statistics", []) or t.get("leaders", [])
-                        for stat in stats:
-                            if isinstance(stat, dict) and ("goal" in stat.get("name", "").lower() or stat.get("name") == "goals"):
-                                value = stat.get("displayValue") or stat.get("value")
-                                if value and str(value) not in ("0", "None"):
-                                    goals_text += f"⚽ {team_name}: {value}\n"
+                        # Пытаемся найти голы
+                        for item in t.get("leaders", []) + t.get("statistics", []):
+                            if isinstance(item, dict):
+                                name = item.get("name", "").lower()
+                                if "goal" in name or "scoring" in name:
+                                    value = item.get("displayValue") or item.get("value")
+                                    if value and str(value) not in ("0", "None"):
+                                        goals_text += f"⚽ {team_name}: {value}\n"
                 except:
                     pass
 
-                text += f"<b>{home} — {away}</b>{score}\n⏰ {match_time} МСК\n📍 {venue}\n📌 {status}\n"
+                # Основной блок матча
+                text += f"<b>{home} — {away}</b>  {score}\n"
+                text += f"⏰ {match_time} МСК   📍 {venue}\n"
+                text += f"📌 {status}\n"
                 if goals_text:
-                    text += goals_text
-                text += "\n"
+                    text += goals_text.strip() + "\n"
+                text += "—" * 35 + "\n\n"
+
             except:
                 continue
 
@@ -164,48 +172,29 @@ async def get_matches_by_date(days_offset: int = 0):
 
     except Exception as e:
         logging.error(f"API Error: {e}")
-        return "⚠️ Не удалось загрузить расписание. Попробуй позже."
+        return "⚠️ Не удалось загрузить матчи. Попробуй позже."
 
 # ==================== СТАДИОНЫ ====================
 async def get_stadiums():
     text = "🏟 <b>Стадионы чемпионата мира 2026</b>\n\n"
-    text += "🇨🇦 <b>Канада</b>\n"
-    text += "• BMO Field (Торонто) — 43 000 мест\n"
-    text += "• BC Place (Ванкувер) — 52 500 мест\n\n"
-    text += "🇲🇽 <b>Мексика</b>\n"
-    text += "• Estadio Azteca (Мехико) — 82 000 мест\n"
-    text += "• Estadio Akron (Гвадалахара) — 46 000 мест\n"
-    text += "• Estadio BBVA (Монтеррей) — 53 500 мест\n\n"
-    text += "🇺🇸 <b>США</b>\n"
-    text += "• MetLife Stadium (Нью-Йорк) — 82 500 мест (финал)\n"
-    text += "• SoFi Stadium (Лос-Анджелес) — 70 000 мест\n"
-    text += "• AT&T Stadium (Даллас) — 80 000 мест\n"
-    text += "• Mercedes-Benz Stadium (Атланта) — 71 000 мест\n"
-    text += "• NRG Stadium (Хьюстон) — 72 000 мест\n"
-    text += "• Hard Rock Stadium (Майами) — 65 000 мест\n"
-    text += "• Lumen Field (Сиэтл) — 69 000 мест\n"
-    text += "• Levi's Stadium (Сан-Франциско) — 68 500 мест\n"
-    text += "• Lincoln Financial Field (Филадельфия) — 69 000 мест\n"
-    text += "• GEHA Field at Arrowhead Stadium (Канзас-Сити) — 76 000 мест\n"
-    text += "• Gillette Stadium (Бостон) — 65 000 мест\n\n"
-    text += "Всего 16 стадионов в трёх странах."
+    text += "🇨🇦 <b>Канада</b>\n• BMO Field (Торонто) — 43 000\n• BC Place (Ванкувер) — 52 500\n\n"
+    text += "🇲🇽 <b>Мексика</b>\n• Estadio Azteca (Мехико) — 82 000\n• Estadio Akron (Гвадалахара) — 46 000\n• Estadio BBVA (Монтеррей) — 53 500\n\n"
+    text += "🇺🇸 <b>США</b>\n• MetLife Stadium (Нью-Йорк) — 82 500\n• SoFi Stadium (Лос-Анджелес) — 70 000\n• AT&T Stadium (Даллас) — 80 000\n• Mercedes-Benz Stadium (Атланта) — 71 000\n• NRG Stadium (Хьюстон) — 72 000\n• Hard Rock Stadium (Майами) — 65 000\n• Lumen Field (Сиэтл) — 69 000\n• Levi's Stadium (Сан-Франциско) — 68 500\n• Lincoln Financial Field (Филадельфия) — 69 000\n• GEHA Field at Arrowhead (Канзас-Сити) — 76 000\n• Gillette Stadium (Бостон) — 65 000\n\n"
+    text += "Всего 16 стадионов."
     return text
 
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
     await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем текущие матчи...")
+    msg = await c.message.edit_text("⏳ Загружаем матчи...")
     text = await get_matches_by_date(0)
     await msg.edit_text(text, reply_markup=back_menu())
 
 @dp.callback_query(F.data == "schedule")
 async def schedule_main(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text(
-        "📅 <b>Расписание матчей ЧМ-2026</b>\n\nВыберите период:",
-        reply_markup=schedule_menu()
-    )
+    await c.message.edit_text("📅 <b>Расписание матчей ЧМ-2026</b>\n\nВыберите период:", reply_markup=schedule_menu())
 
 @dp.callback_query(F.data == "schedule_tomorrow")
 async def schedule_tomorrow(c: CallbackQuery):
@@ -217,21 +206,21 @@ async def schedule_tomorrow(c: CallbackQuery):
 @dp.callback_query(F.data == "schedule_3days")
 async def schedule_3days(c: CallbackQuery):
     await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем ближайшие 3 дня...")
+    msg = await c.message.edit_text("⏳ Загружаем...")
     text = "📅 <b>Ближайшие 3 дня</b>\n\n"
     for i in range(3):
         day_text = await get_matches_by_date(i)
-        text += day_text + "\n" + "—" * 35 + "\n\n"
+        text += day_text + "\n"
     await msg.edit_text(text[:4000], reply_markup=schedule_back_menu())
 
 @dp.callback_query(F.data == "schedule_week")
 async def schedule_week(c: CallbackQuery):
     await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем расписание на неделю...")
-    text = "📅 <b>Расписание на неделю (7 дней)</b>\n\n"
+    msg = await c.message.edit_text("⏳ Загружаем...")
+    text = "📅 <b>Расписание на неделю</b>\n\n"
     for i in range(7):
         day_text = await get_matches_by_date(i)
-        text += day_text + "\n" + "—" * 35 + "\n\n"
+        text += day_text + "\n"
     await msg.edit_text(text[:4000], reply_markup=schedule_back_menu())
 
 @dp.callback_query(F.data == "stadiums")
@@ -256,18 +245,11 @@ async def groups_handler(c: CallbackQuery):
 @dp.callback_query(F.data == "back_to_main")
 async def back_to_main(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text(
-        "🏆 <b>World Cup 2026 Bot</b>\n\nВыберите раздел:",
-        reply_markup=menu()
-    )
+    await c.message.edit_text("🏆 <b>World Cup 2026 Bot</b>\n\nВыберите раздел:", reply_markup=menu())
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer(
-        "🏆 <b>Добро пожаловать в World Cup 2026 Bot!</b>\n\n"
-        "Выберите нужный раздел 👇",
-        reply_markup=menu()
-    )
+    await message.answer("🏆 <b>Добро пожаловать в World Cup 2026 Bot!</b>\n\nВыберите нужный раздел 👇", reply_markup=menu())
 
 @dp.message()
 async def fallback(message: Message):
