@@ -46,75 +46,18 @@ TEAM_NAMES = {
 def ru_team(name: str) -> str:
     return TEAM_NAMES.get(name, name)
 
-# ==================== РЕАЛЬНЫЕ ГРУППЫ ЧМ-2026 ====================
-GROUPS_DATA = {
-    "A": {
-        "teams": ["🇲🇽 Мексика", "🇿🇦 ЮАР", "🇰🇷 Южная Корея", "🇨🇿 Чехия"],
-        "standings": [
-            ("1", "🇲🇽 Мексика", "1", "1", "0", "0", "2-0", "3"),
-            ("2", "🇰🇷 Южная Корея", "1", "1", "0", "0", "2-1", "3"),
-            ("3", "🇨🇿 Чехия", "1", "0", "0", "1", "1-2", "0"),
-            ("4", "🇿🇦 ЮАР", "1", "0", "0", "1", "0-2", "0"),
-        ]
-    },
-    "B": {
-        "teams": ["🇨🇦 Канада", "🇧🇦 Босния и Герцеговина", "🇶🇦 Катар", "🇨🇭 Швейцария"],
-        "standings": []
-    },
-    "C": {
-        "teams": ["🇧🇷 Бразилия", "🇲🇦 Марокко", "🇭🇹 Гаити", "🏴󠁧󠁢󠁳󠁣󠁴󠁿 Шотландия"],
-        "standings": []
-    },
-    "D": {
-        "teams": ["🇺🇸 США", "🇵🇾 Парагвай", "🇦🇺 Австралия", "🇹🇷 Турция"],
-        "standings": []
-    },
-    "E": {
-        "teams": ["🇩🇪 Германия", "🇨🇼 Кюрасао", "🇨🇮 Кот-д'Ивуар", "🇪🇨 Эквадор"],
-        "standings": []
-    },
-    "F": {
-        "teams": ["🇳🇱 Нидерланды", "🇯🇵 Япония", "🇸🇪 Швеция", "🇹🇳 Тунис"],
-        "standings": []
-    },
-    "G": {
-        "teams": ["🇧🇪 Бельгия", "🇪🇬 Египет", "🇮🇷 Иран", "🇳🇿 Новая Зеландия"],
-        "standings": []
-    },
-    "H": {
-        "teams": ["🇪🇸 Испания", "🇨🇻 Кабо-Верде", "🇸🇦 Саудовская Аравия", "🇺🇾 Уругвай"],
-        "standings": []
-    },
-    "I": {
-        "teams": ["🇫🇷 Франция", "🇸🇳 Сенегал", "🇮🇶 Ирак", "🇳🇴 Норвегия"],
-        "standings": []
-    },
-    "J": {
-        "teams": ["🇦🇷 Аргентина", "🇩🇿 Алжир", "🇦🇹 Австрия", "🇯🇴 Иордания"],
-        "standings": []
-    },
-    "K": {
-        "teams": ["🇵🇹 Португалия", "🇨🇩 ДР Конго", "🇺🇿 Узбекистан", "🇨🇴 Колумбия"],
-        "standings": []
-    },
-    "L": {
-        "teams": ["🏴󠁧󠁢󠁥󠁮󠁧󠁿 Англия", "🇭🇷 Хорватия", "🇬🇭 Гана", "🇵🇦 Панама"],
-        "standings": []
-    }
-}
-
-def groups_menu():
-    buttons = []
-    row = []
-    for group in "ABCDEFGHIJKL":
-        row.append(InlineKeyboardButton(text=f"Группа {group}", callback_data=f"group_{group}"))
-        if len(row) == 4:
-            buttons.append(row)
-            row = []
-    if row:
-        buttons.append(row)
-    buttons.append([InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+# ==================== ЗАГРУЗКА ГРУПП ИЗ API ====================
+async def get_groups_from_api():
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://worldcup26.ir/get/groups", timeout=10) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
+                return data.get("groups", [])
+    except Exception as e:
+        logging.error(f"Groups API Error: {e}")
+        return None
 
 # ==================== МЕНЮ ====================
 def menu():
@@ -142,8 +85,21 @@ def schedule_menu():
 def schedule_back_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Назад в расписание", callback_data="schedule")],
-        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
     ])
+
+def groups_menu():
+    buttons = []
+    row = []
+    for group in "ABCDEFGHIJKL":
+        row.append(InlineKeyboardButton(text=f"Группа {group}", callback_data=f"group_{group}"))
+        if len(row) == 4:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+    buttons.append([InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 # ==================== ФУНКЦИЯ МАТЧЕЙ ====================
 async def get_matches_by_date(days_offset: int = 0):
@@ -265,6 +221,14 @@ async def schedule_week(c: CallbackQuery):
 @dp.callback_query(F.data == "groups")
 async def groups_handler(c: CallbackQuery):
     await c.answer()
+    await c.message.edit_text("⏳ Загружаем актуальные группы с сайта...", reply_markup=None)
+    groups = await get_groups_from_api()
+    if not groups:
+        await c.message.edit_text("⚠️ Не удалось загрузить группы. Попробуйте позже.", reply_markup=back_menu())
+        return
+    await show_groups_list(c)
+
+async def show_groups_list(c: CallbackQuery):
     await c.message.edit_text(
         "🏆 <b>Группы Чемпионата мира 2026</b>\n\nВыберите группу:",
         reply_markup=groups_menu()
@@ -274,23 +238,35 @@ async def groups_handler(c: CallbackQuery):
 async def show_group(c: CallbackQuery):
     await c.answer()
     group_letter = c.data.split("_")[1]
-    data = GROUPS_DATA.get(group_letter, {"teams": [], "standings": []})
+    
+    groups = await get_groups_from_api()
+    if not groups:
+        await c.message.edit_text("⚠️ Не удалось загрузить данные. Попробуйте позже.", reply_markup=back_menu())
+        return
 
-    text = f"🏆 <b>Группа {group_letter}</b>\n\n"
-    text += "<b>Состав группы:</b>\n"
-    for team in data["teams"]:
-        text += f"• {team}\n"
-
-    if data["standings"]:
-        text += "\n<b>Таблица группы:</b>\n"
+    group_data = next((g for g in groups if g.get("name") == group_letter), None)
+    
+    if not group_data:
+        text = f"🏆 <b>Группа {group_letter}</b>\n\nДанные обновляются..."
+    else:
+        text = f"🏆 <b>Группа {group_letter}</b>\n\n"
+        text += "<b>Таблица:</b>\n"
         text += "┌────┬────────────────────┬────┬────┬────┬────┬───────┬────┐\n"
         text += "│ М  │ Команда            │ И  │ В  │ Н  │ П  │ Голы  │ О  │\n"
         text += "├────┼────────────────────┼────┼────┼────┼────┼───────┼────┤\n"
-        for pos, team, p, w, d, l, goals, pts in data["standings"]:
-            text += f"│ {pos:2} │ {team:<18} │ {p:2} │ {w:2} │ {d:2} │ {l:2} │ {goals:5} │ {pts:2} │\n"
+
+        teams = group_data.get("teams", [])
+        for i, t in enumerate(teams, 1):
+            team_name = t.get("name", f"Команда {i}")
+            mp = t.get("mp", "0")
+            w = t.get("w", "0")
+            d = t.get("d", "0")
+            l = t.get("l", "0")
+            gf = t.get("gf", "0")
+            ga = t.get("ga", "0")
+            pts = t.get("pts", "0")
+            text += f"│ {i:2} │ {team_name:<18} │ {mp:2} │ {w:2} │ {d:2} │ {l:2} │ {gf}-{ga:2} │ {pts:2} │\n"
         text += "└────┴────────────────────┴────┴────┴────┴────┴───────┴────┘\n"
-    else:
-        text += "\n📊 Таблица обновляется по ходу турнира."
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ К списку групп", callback_data="groups")],
@@ -308,8 +284,20 @@ async def stadiums_handler(c: CallbackQuery):
 @dp.callback_query(F.data == "teams")
 async def teams_handler(c: CallbackQuery):
     await c.answer()
-    text = "🌍 <b>Все сборные на ЧМ-2026 (48 команд)</b>\n\n"
-    for team in ALL_TEAMS if 'ALL_TEAMS' in globals() else []:  # если есть список
+    text = "🌍 <b>Все сборные на ЧМ-2026</b>\n\n"
+    for team in [
+        "🇦🇷 Аргентина", "🇦🇺 Австралия", "🇦🇹 Австрия", "🇩🇿 Алжир", "🇧🇪 Бельгия",
+        "🇧🇷 Бразилия", "🇧🇦 Босния и Герцеговина", "🇬🇭 Гана", "🇩🇪 Германия",
+        "🇭🇹 Гаити", "🇪🇨 Эквадор", "🇪🇬 Египет", "🇮🇷 Иран", "🇮🇶 Ирак", "🇪🇸 Испания",
+        "🇯🇵 Япония", "🇯🇴 Иордания", "🇰🇷 Южная Корея", "🇨🇦 Канада",
+        "🇶🇦 Катар", "🇨🇴 Колумбия", "🇨🇮 Кот-д'Ивуар", "🇨🇼 Кюрасао",
+        "🇲🇦 Марокко", "🇲🇽 Мексика", "🇳🇱 Нидерланды", "🇳🇿 Новая Зеландия",
+        "🇳🇴 Норвегия", "🇵🇦 Панама", "🇵🇾 Парагвай", "🇵🇹 Португалия",
+        "🇸🇦 Саудовская Аравия", "🇸🇳 Сенегал", "🇺🇸 США", "🇹🇳 Тунис",
+        "🇹🇷 Турция", "🇺🇾 Уругвай", "🇺🇿 Узбекистан", "🇨🇿 Чехия",
+        "🇨🇭 Швейцария", "🇸🇪 Швеция", "🇿🇦 ЮАР", "🇫🇷 Франция", "🇭🇷 Хорватия",
+        "🇬🇧 Англия"
+    ]:
         text += f"• {team}\n"
     await c.message.edit_text(text, reply_markup=back_menu())
 
