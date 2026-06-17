@@ -221,11 +221,7 @@ async def schedule_week(c: CallbackQuery):
 @dp.callback_query(F.data == "groups")
 async def groups_handler(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text("⏳ Загружаем актуальные группы с сайта...", reply_markup=None)
-    groups = await get_groups_from_api()
-    if not groups:
-        await c.message.edit_text("⚠️ Не удалось загрузить группы. Попробуйте позже.", reply_markup=back_menu())
-        return
+    await c.message.edit_text("⏳ Загружаем актуальные группы...", reply_markup=None)
     await show_groups_list(c)
 
 async def show_groups_list(c: CallbackQuery):
@@ -257,7 +253,7 @@ async def show_group(c: CallbackQuery):
 
         teams = group_data.get("teams", [])
         for i, t in enumerate(teams, 1):
-            team_name = t.get("name", f"Команда {i}")
+            team_name = f"Команда {t.get('team_id', i)}"   # Можно улучшить маппинг позже
             mp = t.get("mp", "0")
             w = t.get("w", "0")
             d = t.get("d", "0")
