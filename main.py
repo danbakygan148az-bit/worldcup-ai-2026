@@ -89,7 +89,35 @@ def schedule_back_menu():
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
     ])
 
-# ==================== УЛУЧШЕННАЯ ФУНКЦИЯ МАТЧЕЙ ====================
+# ==================== ЗАГРУЗКА ГОЛОВ ЧЕРЕЗ BOXSCORE ====================
+async def get_goal_scorers(event_id: str):
+    if not event_id:
+        return ""
+    url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/boxscore?gameId={event_id}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=10) as resp:
+                if resp.status != 200:
+                    return ""
+                data = await resp.json()
+
+        goals_text = ""
+        competitions = data.get("competitions", [])
+        if not competitions:
+            return ""
+
+        comp = competitions[0]
+        for competitor in comp.get("competitors", []):
+            team_name = ru_team(competitor["team"]["displayName"])
+            stats = competitor.get("statistics", [])
+            for stat in stats:
+                if stat.get("name") == "goals" and stat.get("displayValue"):
+                    goals_text += f"⚽ {team_name}: {stat['displayValue']}\n"
+        return goals_text.strip()
+    except:
+        return ""
+
+# ==================== ОСНОВНАЯ ФУНКЦИЯ МАТЧЕЙ ====================
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
     date_str = target_date.strftime("%Y%m%d")
@@ -109,15 +137,14 @@ async def get_matches_by_date(days_offset: int = 0):
 
         text = f"📅 <b>Матчи — {target_date.strftime('%d.%m.%Y')}</b>\n\n"
         
-        for e in events[:15]:
+        for e in events[:12]:
             try:
                 comp = e["competitions"][0]
                 teams = comp["competitors"]
+                event_id = e.get("id")  # для boxscore
 
-                home_name = teams[0]["team"]["displayName"]
-                away_name = teams[1]["team"]["displayName"]
-                home = ru_team(home_name)
-                away = ru_team(away_name)
+                home = ru_team(teams[0]["team"]["displayName"])
+                away = ru_team(teams[1]["team"]["displayName"])
 
                 status = comp.get("status", {}).get("type", {}).get("shortDetail", "—")
                 venue = comp.get("venue", {}).get("fullName", "—")
@@ -141,29 +168,16 @@ async def get_matches_by_date(days_offset: int = 0):
                 except:
                     pass
 
-                # Красивый вывод голей (попытка вытащить игроков и минуты)
-                goals_text = ""
-                try:
-                    for t in teams:
-                        team_name = ru_team(t["team"]["displayName"])
-                        # Пытаемся найти голы
-                        for item in t.get("leaders", []) + t.get("statistics", []):
-                            if isinstance(item, dict):
-                                name = item.get("name", "").lower()
-                                if "goal" in name or "scoring" in name:
-                                    value = item.get("displayValue") or item.get("value")
-                                    if value and str(value) not in ("0", "None"):
-                                        goals_text += f"⚽ {team_name}: {value}\n"
-                except:
-                    pass
+                # Загружаем голы с игроками
+                goals_text = await get_goal_scorers(event_id)
 
-                # Основной блок матча
                 text += f"<b>{home} — {away}</b>  {score}\n"
-                text += f"⏰ {match_time} МСК   📍 {venue}\n"
+                text += f"⏰ {match_time} МСК\n"
+                text += f"📍 {venue}\n"
                 text += f"📌 {status}\n"
                 if goals_text:
-                    text += goals_text.strip() + "\n"
-                text += "—" * 35 + "\n\n"
+                    text += goals_text + "\n"
+                text += "—" * 40 + "\n\n"
 
             except:
                 continue
@@ -176,7 +190,7 @@ async def get_matches_by_date(days_offset: int = 0):
 
 # ==================== СТАДИОНЫ ====================
 async def get_stadiums():
-    text = "🏟 <b>Стадионы чемпионата мира 2026</b>\n\n"
+    text = "🏟 <b>Стадионы ЧМ-2026</b>\n\n"
     text += "🇨🇦 <b>Канада</b>\n• BMO Field (Торонто) — 43 000\n• BC Place (Ванкувер) — 52 500\n\n"
     text += "🇲🇽 <b>Мексика</b>\n• Estadio Azteca (Мехико) — 82 000\n• Estadio Akron (Гвадалахара) — 46 000\n• Estadio BBVA (Монтеррей) — 53 500\n\n"
     text += "🇺🇸 <b>США</b>\n• MetLife Stadium (Нью-Йорк) — 82 500\n• SoFi Stadium (Лос-Анджелес) — 70 000\n• AT&T Stadium (Даллас) — 80 000\n• Mercedes-Benz Stadium (Атланта) — 71 000\n• NRG Stadium (Хьюстон) — 72 000\n• Hard Rock Stadium (Майами) — 65 000\n• Lumen Field (Сиэтл) — 69 000\n• Levi's Stadium (Сан-Франциско) — 68 500\n• Lincoln Financial Field (Филадельфия) — 69 000\n• GEHA Field at Arrowhead (Канзас-Сити) — 76 000\n• Gillette Stadium (Бостон) — 65 000\n\n"
@@ -187,7 +201,7 @@ async def get_stadiums():
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
     await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем матчи...")
+    msg = await c.message.edit_text("⏳ Загружаем матчи (это может занять пару секунд)...")
     text = await get_matches_by_date(0)
     await msg.edit_text(text, reply_markup=back_menu())
 
@@ -210,17 +224,17 @@ async def schedule_3days(c: CallbackQuery):
     text = "📅 <b>Ближайшие 3 дня</b>\n\n"
     for i in range(3):
         day_text = await get_matches_by_date(i)
-        text += day_text + "\n"
+        text += day_text
     await msg.edit_text(text[:4000], reply_markup=schedule_back_menu())
 
 @dp.callback_query(F.data == "schedule_week")
 async def schedule_week(c: CallbackQuery):
     await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем...")
+    msg = await c.message.edit_text("⏳ Загружаем расписание на неделю...")
     text = "📅 <b>Расписание на неделю</b>\n\n"
     for i in range(7):
         day_text = await get_matches_by_date(i)
-        text += day_text + "\n"
+        text += day_text
     await msg.edit_text(text[:4000], reply_markup=schedule_back_menu())
 
 @dp.callback_query(F.data == "stadiums")
