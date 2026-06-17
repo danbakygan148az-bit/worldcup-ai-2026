@@ -59,15 +59,28 @@ async def get_matches():
 
         text = "⚽ <b>Матчи</b>\n\n"
 
-        for e in events[:8]:
-            comp = e["competitions"][0]
-            teams = comp["competitors"]
+       for e in events[:8]:
+    comp = e["competitions"][0]
 
-            home = teams[0]["team"]["displayName"]
-            away = teams[1]["team"]["displayName"]
-            status = comp["status"]["type"]["shortDetail"]
+    teams = comp["competitors"]
 
-            text += f"🏟 {home} vs {away}\n📌 {status}\n\n"
+    home = teams[0]["team"]["displayName"]
+    away = teams[1]["team"]["displayName"]
+
+    status = comp["status"]["type"]["shortDetail"]
+
+    venue = "Неизвестно"
+    if comp.get("venue"):
+        venue = comp["venue"].get("fullName", "Неизвестно")
+
+    match_time = e.get("date", "")
+
+    text += (
+        f"🏟 <b>{home} vs {away}</b>\n"
+        f"⏰ {match_time}\n"
+        f"📍 {venue}\n"
+        f"📌 {status}\n\n"
+    )
 
         return text
 
