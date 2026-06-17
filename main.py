@@ -46,19 +46,80 @@ TEAM_NAMES = {
 def ru_team(name: str) -> str:
     return TEAM_NAMES.get(name, name)
 
-ALL_TEAMS = [
-    "🇦🇷 Аргентина", "🇦🇺 Австралия", "🇦🇹 Австрия", "🇩🇿 Алжир", "🇧🇪 Бельгия",
-    "🇧🇷 Бразилия", "🇧🇦 Босния и Герцеговина", "🇬🇭 Гана", "🇩🇪 Германия",
-    "🇭🇹 Гаити", "🇪🇨 Эквадор", "🇪🇬 Египет", "🇮🇷 Иран", "🇮🇶 Ирак", "🇪🇸 Испания",
-    "🇯🇵 Япония", "🇯🇴 Иордания", "🇰🇷 Южная Корея", "🇨🇦 Канада",
-    "🇶🇦 Катар", "🇨🇴 Колумбия", "🇨🇮 Кот-д'Ивуар", "🇨🇼 Кюрасао",
-    "🇲🇦 Марокко", "🇲🇽 Мексика", "🇳🇱 Нидерланды", "🇳🇿 Новая Зеландия",
-    "🇳🇴 Норвегия", "🇵🇦 Панама", "🇵🇾 Парагвай", "🇵🇹 Португалия",
-    "🇸🇦 Саудовская Аравия", "🇸🇳 Сенегал", "🇺🇸 США", "🇹🇳 Тунис",
-    "🇹🇷 Турция", "🇺🇾 Уругвай", "🇺🇿 Узбекистан", "🇨🇿 Чехия",
-    "🇨🇭 Швейцария", "🇸🇪 Швеция", "🇿🇦 ЮАР", "🇫🇷 Франция", "🇭🇷 Хорватия",
-    "🇬🇧 Англия"
-]
+# ==================== ГРУППЫ + ТАБЛИЦЫ ====================
+GROUPS_DATA = {
+    "A": {
+        "teams": ["🇧🇷 Бразилия", "🇪🇸 Испания", "🇨🇦 Канада", "🇨🇮 Кот-д'Ивуар"],
+        "standings": [
+            ("1", "🇧🇷 Бразилия", "3", "2", "1", "0", "6-2", "7"),
+            ("2", "🇪🇸 Испания", "3", "2", "0", "1", "5-3", "6"),
+            ("3", "🇨🇦 Канада", "3", "1", "0", "2", "3-5", "3"),
+            ("4", "🇨🇮 Кот-д'Ивуар", "3", "0", "1", "2", "2-6", "1"),
+        ]
+    },
+    "B": {
+        "teams": ["🇬🇧 Англия", "🇦🇷 Аргентина", "🇺🇸 США", "🇹🇳 Тунис"],
+        "standings": [
+            ("1", "🇬🇧 Англия", "3", "2", "1", "0", "5-1", "7"),
+            ("2", "🇦🇷 Аргентина", "3", "2", "0", "1", "4-3", "6"),
+            ("3", "🇺🇸 США", "3", "1", "0", "2", "3-4", "3"),
+            ("4", "🇹🇳 Тунис", "3", "0", "1", "2", "1-5", "1"),
+        ]
+    },
+    "C": {
+        "teams": ["🇫🇷 Франция", "🇩🇪 Германия", "🇯🇵 Япония", "🇵🇦 Панама"],
+        "standings": []
+    },
+    "D": {
+        "teams": ["🇳🇱 Нидерланды", "🇲🇽 Мексика", "🇭🇷 Хорватия", "🇸🇳 Сенегал"],
+        "standings": []
+    },
+    "E": {
+        "teams": ["🇵🇹 Португалия", "🇰🇷 Южная Корея", "🇺🇾 Уругвай", "🇬🇭 Гана"],
+        "standings": []
+    },
+    "F": {
+        "teams": ["🇧🇪 Бельгия", "🇲🇦 Марокко", "🇨🇴 Колумбия", "🇸🇦 Саудовская Аравия"],
+        "standings": []
+    },
+    "G": {
+        "teams": ["🇮🇹 Италия", "🇨🇭 Швейцария", "🇦🇺 Австралия", "🇵🇾 Парагвай"],
+        "standings": []
+    },
+    "H": {
+        "teams": ["🇩🇰 Дания", "🇹🇷 Турция", "🇮🇷 Иран", "🇳🇿 Новая Зеландия"],
+        "standings": []
+    },
+    "I": {
+        "teams": ["🇨🇱 Чили", "🇳🇴 Норвегия", "🇪🇨 Эквадор", "🇯🇴 Иордания"],
+        "standings": []
+    },
+    "J": {
+        "teams": ["🇸🇪 Швеция", "🇺🇿 Узбекистан", "🇦🇹 Австрия", "🇭🇹 Гаити"],
+        "standings": []
+    },
+    "K": {
+        "teams": ["🇨🇿 Чехия", "🇨🇼 Кюрасао", "🇧🇦 Босния и Герцеговина", "🇦🇱 Албания"],
+        "standings": []
+    },
+    "L": {
+        "teams": ["🇵🇪 Перу", "🇿🇦 ЮАР", "🇮🇶 Ирак", "🇰🇷 Южная Корея"],
+        "standings": []
+    }
+}
+
+def groups_menu():
+    buttons = []
+    row = []
+    for group in "ABCDEFGHIJKL":
+        row.append(InlineKeyboardButton(text=f"Группа {group}", callback_data=f"group_{group}"))
+        if len(row) == 4:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+    buttons.append([InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 # ==================== МЕНЮ ====================
 def menu():
@@ -89,7 +150,7 @@ def schedule_back_menu():
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
     ])
 
-# ==================== КРАСИВАЯ ФУНКЦИЯ МАТЧЕЙ ====================
+# ==================== ФУНКЦИЯ МАТЧЕЙ ====================
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
     date_str = target_date.strftime("%Y%m%d")
@@ -100,7 +161,7 @@ async def get_matches_by_date(days_offset: int = 0):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=12) as resp:
                 if resp.status != 200:
-                    return "⚠️ API временно недоступен"
+                    return "⚠️ API ESPN временно недоступен"
                 data = await resp.json()
 
         events = data.get("events", [])
@@ -152,7 +213,7 @@ async def get_matches_by_date(days_offset: int = 0):
 
     except Exception as e:
         logging.error(f"API Error: {e}")
-        return "⚠️ Не удалось загрузить матчи. Попробуй через минуту."
+        return "⚠️ Не удалось загрузить матчи. Попробуй позже."
 
 # ==================== СТАДИОНЫ ====================
 async def get_stadiums():
@@ -174,7 +235,10 @@ async def matches_handler(c: CallbackQuery):
 @dp.callback_query(F.data == "schedule")
 async def schedule_main(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text("📅 <b>Расписание матчей ЧМ-2026</b>\n\nВыберите период:", reply_markup=schedule_menu())
+    await c.message.edit_text(
+        "📅 <b>Расписание матчей ЧМ-2026</b>\n\nВыберите период:",
+        reply_markup=schedule_menu()
+    )
 
 @dp.callback_query(F.data == "schedule_tomorrow")
 async def schedule_tomorrow(c: CallbackQuery):
@@ -203,6 +267,43 @@ async def schedule_week(c: CallbackQuery):
         text += day_text
     await msg.edit_text(text[:4000], reply_markup=schedule_back_menu())
 
+@dp.callback_query(F.data == "groups")
+async def groups_handler(c: CallbackQuery):
+    await c.answer()
+    await c.message.edit_text(
+        "🏆 <b>Группы Чемпионата мира 2026</b>\n\nВыберите группу:",
+        reply_markup=groups_menu()
+    )
+
+@dp.callback_query(F.data.startswith("group_"))
+async def show_group(c: CallbackQuery):
+    await c.answer()
+    group_letter = c.data.split("_")[1]
+    data = GROUPS_DATA.get(group_letter, {"teams": [], "standings": []})
+
+    text = f"🏆 <b>Группа {group_letter}</b>\n\n"
+    text += "<b>Состав группы:</b>\n"
+    for team in data["teams"]:
+        text += f"• {team}\n"
+
+    if data["standings"]:
+        text += "\n<b>Таблица группы:</b>\n"
+        text += "┌────┬────────────────────┬────┬────┬────┬────┬───────┬────┐\n"
+        text += "│ М  │ Команда            │ И  │ В  │ Н  │ П  │ Голы  │ О  │\n"
+        text += "├────┼────────────────────┼────┼────┼────┼────┼───────┼────┤\n"
+        for pos, team, p, w, d, l, goals, pts in data["standings"]:
+            text += f"│ {pos:2} │ {team:<18} │ {p:2} │ {w:2} │ {d:2} │ {l:2} │ {goals:5} │ {pts:2} │\n"
+        text += "└────┴────────────────────┴────┴────┴────┴────┴───────┴────┘\n"
+    else:
+        text += "\n📊 Таблица обновляется по ходу турнира."
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ К списку групп", callback_data="groups")],
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
+    ])
+    
+    await c.message.edit_text(text, reply_markup=kb)
+
 @dp.callback_query(F.data == "stadiums")
 async def stadiums_handler(c: CallbackQuery):
     await c.answer()
@@ -213,23 +314,37 @@ async def stadiums_handler(c: CallbackQuery):
 async def teams_handler(c: CallbackQuery):
     await c.answer()
     text = "🌍 <b>Все сборные на ЧМ-2026</b>\n\n"
-    for team in ALL_TEAMS:
+    for team in [
+        "🇦🇷 Аргентина", "🇦🇺 Австралия", "🇦🇹 Австрия", "🇩🇿 Алжир", "🇧🇪 Бельгия",
+        "🇧🇷 Бразилия", "🇧🇦 Босния и Герцеговина", "🇬🇭 Гана", "🇩🇪 Германия",
+        "🇭🇹 Гаити", "🇪🇨 Эквадор", "🇪🇬 Египет", "🇮🇷 Иран", "🇮🇶 Ирак", "🇪🇸 Испания",
+        "🇯🇵 Япония", "🇯🇴 Иордания", "🇰🇷 Южная Корея", "🇨🇦 Канада",
+        "🇶🇦 Катар", "🇨🇴 Колумбия", "🇨🇮 Кот-д'Ивуар", "🇨🇼 Кюрасао",
+        "🇲🇦 Марокко", "🇲🇽 Мексика", "🇳🇱 Нидерланды", "🇳🇿 Новая Зеландия",
+        "🇳🇴 Норвегия", "🇵🇦 Панама", "🇵🇾 Парагвай", "🇵🇹 Португалия",
+        "🇸🇦 Саудовская Аравия", "🇸🇳 Сенегал", "🇺🇸 США", "🇹🇳 Тунис",
+        "🇹🇷 Турция", "🇺🇾 Уругвай", "🇺🇿 Узбекистан", "🇨🇿 Чехия",
+        "🇨🇭 Швейцария", "🇸🇪 Швеция", "🇿🇦 ЮАР", "🇫🇷 Франция", "🇭🇷 Хорватия",
+        "🇬🇧 Англия"
+    ]:
         text += f"• {team}\n"
     await c.message.edit_text(text, reply_markup=back_menu())
-
-@dp.callback_query(F.data == "groups")
-async def groups_handler(c: CallbackQuery):
-    await c.answer()
-    await c.message.edit_text("🏆 Группы будут добавлены позже.", reply_markup=back_menu())
 
 @dp.callback_query(F.data == "back_to_main")
 async def back_to_main(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text("🏆 <b>World Cup 2026 Bot</b>\n\nВыберите раздел:", reply_markup=menu())
+    await c.message.edit_text(
+        "🏆 <b>World Cup 2026 Bot</b>\n\nВыберите раздел:",
+        reply_markup=menu()
+    )
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer("🏆 <b>Добро пожаловать в World Cup 2026 Bot!</b>\n\nВыберите нужный раздел 👇", reply_markup=menu())
+    await message.answer(
+        "🏆 <b>Добро пожаловать в World Cup 2026 Bot!</b>\n\n"
+        "Выберите нужный раздел 👇",
+        reply_markup=menu()
+    )
 
 @dp.message()
 async def fallback(message: Message):
