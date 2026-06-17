@@ -8,6 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 
@@ -73,7 +74,15 @@ async def get_matches():
     if comp.get("venue"):
         venue = comp["venue"].get("fullName", "Неизвестно")
 
-    match_time = e.get("date", "")
+    raw_date = e.get("date", "")
+
+try:
+    dt = datetime.fromisoformat(
+        raw_date.replace("Z", "+00:00")
+    )
+    match_time = dt.strftime("%d.%m.%Y %H:%M UTC")
+except:
+    match_time = raw_date
 
     text += (
         f"🏟 <b>{home} vs {away}</b>\n"
