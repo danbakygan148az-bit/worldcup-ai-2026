@@ -89,35 +89,7 @@ def schedule_back_menu():
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
     ])
 
-# ==================== ЗАГРУЗКА ГОЛОВ ЧЕРЕЗ BOXSCORE ====================
-async def get_goal_scorers(event_id: str):
-    if not event_id:
-        return ""
-    url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/boxscore?gameId={event_id}"
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=10) as resp:
-                if resp.status != 200:
-                    return ""
-                data = await resp.json()
-
-        goals_text = ""
-        competitions = data.get("competitions", [])
-        if not competitions:
-            return ""
-
-        comp = competitions[0]
-        for competitor in comp.get("competitors", []):
-            team_name = ru_team(competitor["team"]["displayName"])
-            stats = competitor.get("statistics", [])
-            for stat in stats:
-                if stat.get("name") == "goals" and stat.get("displayValue"):
-                    goals_text += f"⚽ {team_name}: {stat['displayValue']}\n"
-        return goals_text.strip()
-    except:
-        return ""
-
-# ==================== ОСНОВНАЯ ФУНКЦИЯ МАТЧЕЙ ====================
+# ==================== КРАСИВАЯ ФУНКЦИЯ МАТЧЕЙ ====================
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
     date_str = target_date.strftime("%Y%m%d")
@@ -126,9 +98,9 @@ async def get_matches_by_date(days_offset: int = 0):
     
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=15) as resp:
+            async with session.get(url, timeout=12) as resp:
                 if resp.status != 200:
-                    return "⚠️ API ESPN временно недоступен"
+                    return "⚠️ API временно недоступен"
                 data = await resp.json()
 
         events = data.get("events", [])
@@ -137,11 +109,10 @@ async def get_matches_by_date(days_offset: int = 0):
 
         text = f"📅 <b>Матчи — {target_date.strftime('%d.%m.%Y')}</b>\n\n"
         
-        for e in events[:12]:
+        for e in events[:15]:
             try:
                 comp = e["competitions"][0]
                 teams = comp["competitors"]
-                event_id = e.get("id")  # для boxscore
 
                 home = ru_team(teams[0]["team"]["displayName"])
                 away = ru_team(teams[1]["team"]["displayName"])
@@ -168,16 +139,11 @@ async def get_matches_by_date(days_offset: int = 0):
                 except:
                     pass
 
-                # Загружаем голы с игроками
-                goals_text = await get_goal_scorers(event_id)
-
                 text += f"<b>{home} — {away}</b>  {score}\n"
                 text += f"⏰ {match_time} МСК\n"
                 text += f"📍 {venue}\n"
-                text += f"📌 {status}\n"
-                if goals_text:
-                    text += goals_text + "\n"
-                text += "—" * 40 + "\n\n"
+                text += f"📌 {status}\n\n"
+                text += "─" * 40 + "\n\n"
 
             except:
                 continue
@@ -186,7 +152,7 @@ async def get_matches_by_date(days_offset: int = 0):
 
     except Exception as e:
         logging.error(f"API Error: {e}")
-        return "⚠️ Не удалось загрузить матчи. Попробуй позже."
+        return "⚠️ Не удалось загрузить матчи. Попробуй через минуту."
 
 # ==================== СТАДИОНЫ ====================
 async def get_stadiums():
@@ -201,7 +167,7 @@ async def get_stadiums():
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
     await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем матчи (это может занять пару секунд)...")
+    msg = await c.message.edit_text("⏳ Загружаем матчи...")
     text = await get_matches_by_date(0)
     await msg.edit_text(text, reply_markup=back_menu())
 
@@ -230,7 +196,7 @@ async def schedule_3days(c: CallbackQuery):
 @dp.callback_query(F.data == "schedule_week")
 async def schedule_week(c: CallbackQuery):
     await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем расписание на неделю...")
+    msg = await c.message.edit_text("⏳ Загружаем...")
     text = "📅 <b>Расписание на неделю</b>\n\n"
     for i in range(7):
         day_text = await get_matches_by_date(i)
