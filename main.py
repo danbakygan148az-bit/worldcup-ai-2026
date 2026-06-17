@@ -77,16 +77,15 @@ def back_menu():
 
 def schedule_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Сегодня", callback_data="schedule_today")],
         [InlineKeyboardButton(text="Завтра", callback_data="schedule_tomorrow")],
-        [InlineKeyboardButton(text="Ближайшие 3 дня", callback_data="schedule_3days")],
+        [InlineKeyboardButton(text="На неделю", callback_data="schedule_week")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back")],
     ])
 
-# ==================== УНИВЕРСАЛЬНАЯ ФУНКЦИЯ МАТЧЕЙ ====================
+# ==================== УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ====================
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
-    date_str = target_date.strftime("%Y%m%d")   # формат YYYYMMDD для ESPN
+    date_str = target_date.strftime("%Y%m%d")
 
     url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates={date_str}&limit=100"
     
@@ -101,7 +100,7 @@ async def get_matches_by_date(days_offset: int = 0):
         if not events:
             return f"⚽ На {target_date.strftime('%d.%m.%Y')} матчей не найдено."
 
-        text = f"📅 <b>Матчи ЧМ-2026 — {target_date.strftime('%d.%m.%Y')}</b>\n\n"
+        text = f"📅 <b>Матчи — {target_date.strftime('%d.%m.%Y')}</b>\n\n"
         count = 0
 
         for e in events[:20]:
@@ -112,9 +111,7 @@ async def get_matches_by_date(days_offset: int = 0):
                 home = ru_team(teams[0]["team"]["displayName"])
                 away = ru_team(teams[1]["team"]["displayName"])
 
-                status_info = comp.get("status", {}).get("type", {})
-                status = status_info.get("shortDetail") or status_info.get("detail", "—")
-
+                status = comp.get("status", {}).get("type", {}).get("shortDetail", "—")
                 venue = comp.get("venue", {}).get("fullName", "—")
 
                 match_time = "—"
@@ -141,51 +138,47 @@ async def get_matches_by_date(days_offset: int = 0):
             except:
                 continue
 
-        return text if count > 0 else "⚽ Матчи найдены, но данные пока пустые."
+        return text if count > 0 else f"⚽ На {target_date.strftime('%d.%m')} матчей пока нет."
 
     except Exception as e:
         logging.error(f"API Error: {e}")
-        return "⚠️ Не удалось загрузить расписание. Попробуй позже."
+        return "⚠️ Не удалось загрузить расписание."
 
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
     await c.answer()
     msg = await c.message.edit_text("⏳ Загружаем текущие матчи...")
-    text = await get_matches_by_date(days_offset=0)  # сегодня + live
+    text = await get_matches_by_date(0)
     await msg.edit_text(text, reply_markup=back_menu())
 
 @dp.callback_query(F.data == "schedule")
 async def schedule_main(c: CallbackQuery):
     await c.answer()
     await c.message.edit_text(
-        "📅 <b>Расписание матчей ЧМ-2026</b>\n\nВыберите день:",
+        "📅 <b>Расписание матчей ЧМ-2026</b>\n\nВыберите период:",
         reply_markup=schedule_menu()
     )
-
-@dp.callback_query(F.data == "schedule_today")
-async def schedule_today(c: CallbackQuery):
-    await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем матчи на сегодня...")
-    text = await get_matches_by_date(days_offset=0)
-    await msg.edit_text(text, reply_markup=back_menu())
 
 @dp.callback_query(F.data == "schedule_tomorrow")
 async def schedule_tomorrow(c: CallbackQuery):
     await c.answer()
     msg = await c.message.edit_text("⏳ Загружаем матчи на завтра...")
-    text = await get_matches_by_date(days_offset=1)
+    text = await get_matches_by_date(1)
     await msg.edit_text(text, reply_markup=back_menu())
 
-@dp.callback_query(F.data == "schedule_3days")
-async def schedule_3days(c: CallbackQuery):
+@dp.callback_query(F.data == "schedule_week")
+async def schedule_week(c: CallbackQuery):
     await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем матчи на ближайшие 3 дня...")
-    text = "📅 <b>Ближайшие 3 дня</b>\n\n"
-    for i in range(3):
+    msg = await c.message.edit_text("⏳ Загружаем расписание на неделю...")
+    
+    text = "📅 <b>Расписание на неделю (7 дней)</b>\n\n"
+    for i in range(7):
         day_text = await get_matches_by_date(days_offset=i)
-        text += day_text + "\n" + "—" * 30 + "\n\n"
-    await msg.edit_text(text[:4000], reply_markup=back_menu())  # обрезаем если слишком длинный
+        text += day_text + "\n" + "—" * 35 + "\n\n"
+    
+    # Обрезаем, если сообщение слишком длинное
+    await msg.edit_text(text[:4000], reply_markup=back_menu())
 
 @dp.callback_query(F.data == "teams")
 async def teams_handler(c: CallbackQuery):
