@@ -88,61 +88,47 @@ async def get_matches():
 
         events = data.get("events", [])
         if not events:
-            return "⚽ Сейчас нет активных матчей.\n\nПроверь позже!"
+            return "⚽ Сегодня матчей нет."
 
-        text = "⚽ <b>Матчи ЧМ-2026</b>\n\n"
+        text = "⚽ <b>Матчи ЧМ-2026 — Сегодня (17 июня)</b>\n\n"
         count = 0
 
-        for e in events[:15]:
+        for e in events[:20]:
             try:
                 comp = e["competitions"][0]
                 teams = comp["competitors"]
 
-                home_name = teams[0]["team"]["displayName"]
-                away_name = teams[1]["team"]["displayName"]
-                home = ru_team(home_name)
-                away = ru_team(away_name)
+                home = ru_team(teams[0]["team"]["displayName"])
+                away = ru_team(teams[1]["team"]["displayName"])
 
-                # Статус
                 status_info = comp.get("status", {}).get("type", {})
                 status = status_info.get("shortDetail") or status_info.get("detail", "—")
 
-                # Стадион
                 venue = comp.get("venue", {}).get("fullName", "—")
 
-                # Время
                 match_time = "—"
                 try:
-                    raw_date = e.get("date") or comp.get("date") or comp.get("startDate")
+                    raw_date = e.get("date") or comp.get("date")
                     if raw_date:
                         dt = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
-                        dt = dt + timedelta(hours=3)  # МСК
-                        match_time = dt.strftime("%d.%m %H:%M")
+                        dt = dt + timedelta(hours=3)
+                        match_time = dt.strftime("%H:%M")
                 except:
                     pass
 
-                # Счёт
                 score = ""
                 try:
-                    h_score = teams[0].get("score", "")
-                    a_score = teams[1].get("score", "")
-                    if str(h_score) not in ("", "None", "NoneType", None) and str(a_score) not in ("", "None", "NoneType", None):
-                        score = f" <b>{h_score}–{a_score}</b>"
+                    h = teams[0].get("score", "")
+                    a = teams[1].get("score", "")
+                    if str(h) not in ("", "None", None) and str(a) not in ("", "None", None):
+                        score = f" <b>{h}–{a}</b>"
                 except:
                     pass
 
-                text += (
-                    f"<b>{home} — {away}</b>{score}\n"
-                    f"⏰ {match_time} МСК\n"
-                    f"📍 {venue}\n"
-                    f"📌 {status}\n\n"
-                )
+                text += f"<b>{home} — {away}</b>{score}\n⏰ {match_time} МСК\n📍 {venue}\n📌 {status}\n\n"
                 count += 1
             except:
                 continue
-
-        if count == 0:
-            text += "На данный момент матчей не найдено."
 
         return text
 
