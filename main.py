@@ -32,7 +32,7 @@ TEAM_NAMES = {
     "Congo DR": "ДР Конго", "Ivory Coast": "Кот-д'Ивуар", "Côte d'Ivoire": "Кот-д'Ивуар",
     "Egypt": "Египет", "Ghana": "Гана", "Morocco": "Марокко", "Senegal": "Сенегал",
     "South Africa": "ЮАР", "Tunisia": "Тунис",
-    "Curacao": "Кюрасао", "Haiti": "Гаити", "Panama": "Панама",
+    "Curaçao": "Кюрасао", "Haiti": "Гаити", "Panama": "Панама",
     "Argentina": "Аргентина", "Brazil": "Бразилия", "Colombia": "Колумбия",
     "Ecuador": "Эквадор", "Paraguay": "Парагвай", "Uruguay": "Уругвай",
     "Austria": "Австрия", "Belgium": "Бельгия", "Bosnia-Herzegovina": "Босния и Герцеговина",
@@ -40,7 +40,8 @@ TEAM_NAMES = {
     "England": "Англия", "France": "Франция", "Germany": "Германия",
     "Netherlands": "Нидерланды", "Norway": "Норвегия", "Portugal": "Португалия",
     "Scotland": "Шотландия", "Spain": "Испания", "Sweden": "Швеция",
-    "Switzerland": "Швейцария", "Turkey": "Турция", "Türkiye": "Турция",
+    "Switzerland": "Швейцария", "Turkey": "Турция", "Türkiye": "Турция", "Scotland": "Шотландия", 
+    "Democratic Republic of the Congo": "ДР Конго", "Republic of Cabo Verde": "Кабо-верде",
 }
 
 def ru_team(name: str) -> str:
@@ -292,7 +293,7 @@ async def teams_handler(c: CallbackQuery):
         "🇸🇦 Саудовская Аравия", "🇸🇳 Сенегал", "🇺🇸 США", "🇹🇳 Тунис",
         "🇹🇷 Турция", "🇺🇾 Уругвай", "🇺🇿 Узбекистан", "🇨🇿 Чехия",
         "🇨🇭 Швейцария", "🇸🇪 Швеция", "🇿🇦 ЮАР", "🇫🇷 Франция", "🇭🇷 Хорватия",
-        "🇬🇧 Англия"
+        "🇬🇧 Англия", "sc Шотландия", "🇨🇩 ДР Конго", "🇨🇻 Кабо-Верде",
     ]:
         text += f"• {team}\n"
     await c.message.edit_text(text, reply_markup=back_menu())
