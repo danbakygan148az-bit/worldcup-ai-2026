@@ -246,14 +246,17 @@ async def show_group(c: CallbackQuery):
         text = f"🏆 <b>Группа {group_letter}</b>\n\nДанные обновляются..."
     else:
         text = f"🏆 <b>Группа {group_letter}</b>\n\n"
-        text += "<b>Таблица:</b>\n"
-        text += "┌────┬────────────────────┬────┬────┬────┬────┬───────┬────┐\n"
-        text += "│ М  │ Команда            │ И  │ В  │ Н  │ П  │ Голы  │ О  │\n"
-        text += "├────┼────────────────────┼────┼────┼────┼────┼───────┼────┤\n"
+        text += "<b>Таблица группы:</b>\n\n"
         
         teams = group_data.get("teams", [])
+        
+        # Заголовок
+        text += "<b>М | Команда              | И | В | Н | П | Голы  | О</b>\n"
+        text += "─" * 45 + "\n"
+        
         for i, t in enumerate(teams, 1):
-            team_name = t.get("name", f"Команда {i}")
+            team_id = t.get("team_id")
+            team_name = get_team_name(team_id)
             mp = t.get("mp", "0")
             w = t.get("w", "0")
             d = t.get("d", "0")
@@ -261,8 +264,8 @@ async def show_group(c: CallbackQuery):
             gf = t.get("gf", "0")
             ga = t.get("ga", "0")
             pts = t.get("pts", "0")
-            text += f"│ {i:2} │ {team_name:<18} │ {mp:2} │ {w:2} │ {d:2} │ {l:2} │ {gf}-{ga:2} │ {pts:2} │\n"
-        text += "└────┴────────────────────┴────┴────┴────┴────┴───────┴────┘\n"
+            
+            text += f"{i} | {team_name:<18} | {mp:1} | {w:1} | {d:1} | {l:1} | {gf}-{ga:<3} | <b>{pts}</b>\n"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ К списку групп", callback_data="groups")],
