@@ -59,7 +59,49 @@ async def get_groups_from_api():
         logging.error(f"Groups API Error: {e}")
         return None
 
-# ==================== ФУНКЦИЯ МАТЧЕЙ (исправленная) ====================
+# ==================== МЕНЮ ====================
+def menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⚽ Текущие матчи", callback_data="matches")],
+        [InlineKeyboardButton(text="📅 Расписание", callback_data="schedule")],
+        [InlineKeyboardButton(text="🏆 Группы", callback_data="groups")],
+        [InlineKeyboardButton(text="🌍 Все команды", callback_data="teams")],
+        [InlineKeyboardButton(text="🏟 Стадионы", callback_data="stadiums")],
+    ])
+
+def back_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
+    ])
+
+def schedule_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Завтра", callback_data="schedule_tomorrow")],
+        [InlineKeyboardButton(text="Ближайшие 3 дня", callback_data="schedule_3days")],
+        [InlineKeyboardButton(text="На неделю", callback_data="schedule_week")],
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
+    ])
+
+def schedule_back_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ Назад в расписание", callback_data="schedule")],
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
+    ])
+
+def groups_menu():
+    buttons = []
+    row = []
+    for group in "ABCDEFGHIJKL":
+        row.append(InlineKeyboardButton(text=f"Группа {group}", callback_data=f"group_{group}"))
+        if len(row) == 4:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+    buttons.append([InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+# ==================== ФУНКЦИЯ МАТЧЕЙ ====================
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
     date_str = target_date.strftime("%Y%m%d")
@@ -70,22 +112,19 @@ async def get_matches_by_date(days_offset: int = 0):
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=15) as resp:
                 if resp.status != 200:
-                    return f"⚠️ API ESPN недоступен (код {resp.status})"
+                    return "⚠️ API ESPN временно недоступен"
                 data = await resp.json()
 
         events = data.get("events", [])
         if not events:
-            return f"⚽ На {target_date.strftime('%d.%m.%Y')} матчей пока нет."
+            return f"⚽ На {target_date.strftime('%d.%m.%Y')} матчей не найдено."
 
         text = f"📅 <b>Матчи — {target_date.strftime('%d.%m.%Y')}</b>\n\n"
         
         for e in events[:15]:
             try:
-                comp = e.get("competitions", [{}])[0]
-                teams = comp.get("competitors", [])
-
-                if len(teams) < 2:
-                    continue
+                comp = e["competitions"][0]
+                teams = comp["competitors"]
 
                 home = ru_team(teams[0]["team"]["displayName"])
                 away = ru_team(teams[1]["team"]["displayName"])
@@ -124,8 +163,8 @@ async def get_matches_by_date(days_offset: int = 0):
         return text
 
     except Exception as e:
-        logging.error(f"Match API Error: {e}")
-        return "⚠️ Не удалось загрузить расписание. Попробуйте через минуту."
+        logging.error(f"API Error: {e}")
+        return "⚠️ Не удалось загрузить матчи. Попробуйте позже."
 
 # ==================== СТАДИОНЫ ====================
 async def get_stadiums():
@@ -179,6 +218,18 @@ async def schedule_week(c: CallbackQuery):
         text += day_text
     await msg.edit_text(text[:4000], reply_markup=schedule_back_menu())
 
+@dp.callback_query(F.data == "groups")
+async def groups_handler(c: CallbackQuery):
+    await c.answer()
+    await c.message.edit_text("⏳ Загружаем актуальные группы...", reply_markup=None)
+    await show_groups_list(c)
+
+async def show_groups_list(c: CallbackQuery):
+    await c.message.edit_text(
+        "🏆 <b>Группы Чемпионата мира 2026</b>\n\nВыберите группу:",
+        reply_markup=groups_menu()
+    )
+
 @dp.callback_query(F.data.startswith("group_"))
 async def show_group(c: CallbackQuery):
     await c.answer()
@@ -195,17 +246,14 @@ async def show_group(c: CallbackQuery):
         text = f"🏆 <b>Группа {group_letter}</b>\n\nДанные обновляются..."
     else:
         text = f"🏆 <b>Группа {group_letter}</b>\n\n"
-        text += "<b>Таблица группы:</b>\n\n"
+        text += "<b>Таблица:</b>\n"
+        text += "┌────┬────────────────────┬────┬────┬────┬────┬───────┬────┐\n"
+        text += "│ М  │ Команда            │ И  │ В  │ Н  │ П  │ Голы  │ О  │\n"
+        text += "├────┼────────────────────┼────┼────┼────┼────┼───────┼────┤\n"
         
         teams = group_data.get("teams", [])
-        
-        # Заголовок
-        text += "<b>М | Команда              | И | В | Н | П | Голы  | О</b>\n"
-        text += "─" * 45 + "\n"
-        
         for i, t in enumerate(teams, 1):
-            team_id = t.get("team_id")
-            team_name = get_team_name(team_id)
+            team_name = t.get("name", f"Команда {i}")
             mp = t.get("mp", "0")
             w = t.get("w", "0")
             d = t.get("d", "0")
@@ -213,8 +261,8 @@ async def show_group(c: CallbackQuery):
             gf = t.get("gf", "0")
             ga = t.get("ga", "0")
             pts = t.get("pts", "0")
-            
-            text += f"{i} | {team_name:<18} | {mp:1} | {w:1} | {d:1} | {l:1} | {gf}-{ga:<3} | <b>{pts}</b>\n"
+            text += f"│ {i:2} │ {team_name:<18} │ {mp:2} │ {w:2} │ {d:2} │ {l:2} │ {gf}-{ga:2} │ {pts:2} │\n"
+        text += "└────┴────────────────────┴────┴────┴────┴────┴───────┴────┘\n"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ К списку групп", callback_data="groups")],
