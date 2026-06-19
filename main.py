@@ -43,24 +43,8 @@ TEAM_NAMES = {
     "Switzerland": "Швейцария", "Turkey": "Турция", "Türkiye": "Турция",
 }
 
-# ==================== МАППИНГ team_id → Название ====================
-TEAM_ID_MAP = {
-    "1": "Мексика", "2": "ЮАР", "3": "Южная Корея", "4": "Чехия",
-    "5": "Канада", "6": "Босния и Герцеговина", "7": "Катар", "8": "Швейцария",
-    "9": "Бразилия", "10": "Марокко", "11": "Гаити", "12": "Шотландия",
-    "13": "США", "14": "Парагвай", "15": "Австралия", "16": "Турция",
-    "17": "Германия", "18": "Кюрасао", "19": "Кот-д'Ивуар", "20": "Эквадор",
-    "21": "Нидерланды", "22": "Япония", "23": "Швеция", "24": "Тунис",
-    "25": "Бельгия", "26": "Египет", "27": "Иран", "28": "Новая Зеландия",
-    "29": "Испания", "30": "Кабо-Верде", "31": "Саудовская Аравия", "32": "Уругвай",
-    "33": "Франция", "34": "Сенегал", "35": "Ирак", "36": "Норвегия",
-    "37": "Аргентина", "38": "Алжир", "39": "Австрия", "40": "Иордания",
-    "41": "Португалия", "42": "ДР Конго", "43": "Узбекистан", "44": "Колумбия",
-    "45": "Англия", "46": "Хорватия", "47": "Гана", "48": "Панама",
-}
-
-def get_team_name(team_id: str) -> str:
-    return TEAM_ID_MAP.get(str(team_id), f"Команда {team_id}")
+def ru_team(name: str) -> str:
+    return TEAM_NAMES.get(name, name)
 
 # ==================== ЗАГРУЗКА ГРУПП ИЗ API ====================
 async def get_groups_from_api():
@@ -75,73 +59,40 @@ async def get_groups_from_api():
         logging.error(f"Groups API Error: {e}")
         return None
 
-# ==================== МЕНЮ ====================
-def menu():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⚽ Текущие матчи", callback_data="matches")],
-        [InlineKeyboardButton(text="📅 Расписание", callback_data="schedule")],
-        [InlineKeyboardButton(text="🏆 Группы", callback_data="groups")],
-        [InlineKeyboardButton(text="🌍 Все команды", callback_data="teams")],
-        [InlineKeyboardButton(text="🏟 Стадионы", callback_data="stadiums")],
-    ])
-
-def back_menu():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
-    ])
-
-def schedule_menu():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Завтра", callback_data="schedule_tomorrow")],
-        [InlineKeyboardButton(text="Ближайшие 3 дня", callback_data="schedule_3days")],
-        [InlineKeyboardButton(text="На неделю", callback_data="schedule_week")],
-        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")],
-    ])
-
-def schedule_back_menu():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Назад в расписание", callback_data="schedule")],
-        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
-    ])
-
-def groups_menu():
-    buttons = []
-    row = []
-    for group in "ABCDEFGHIJKL":
-        row.append(InlineKeyboardButton(text=f"Группа {group}", callback_data=f"group_{group}"))
-        if len(row) == 4:
-            buttons.append(row)
-            row = []
-    if row:
-        buttons.append(row)
-    buttons.append([InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-# ==================== ФУНКЦИЯ МАТЧЕЙ ====================
+# ==================== ФУНКЦИЯ МАТЧЕЙ (исправленная) ====================
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
     date_str = target_date.strftime("%Y%m%d")
+
     url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates={date_str}&limit=100"
-   
+    
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=12) as resp:
+            async with session.get(url, timeout=15) as resp:
                 if resp.status != 200:
-                    return "⚠️ API ESPN временно недоступен"
+                    return f"⚠️ API ESPN недоступен (код {resp.status})"
                 data = await resp.json()
+
         events = data.get("events", [])
         if not events:
-            return f"⚽ На {target_date.strftime('%d.%m.%Y')} матчей не найдено."
+            return f"⚽ На {target_date.strftime('%d.%m.%Y')} матчей пока нет."
+
         text = f"📅 <b>Матчи — {target_date.strftime('%d.%m.%Y')}</b>\n\n"
-       
+        
         for e in events[:15]:
             try:
-                comp = e["competitions"][0]
-                teams = comp["competitors"]
+                comp = e.get("competitions", [{}])[0]
+                teams = comp.get("competitors", [])
+
+                if len(teams) < 2:
+                    continue
+
                 home = ru_team(teams[0]["team"]["displayName"])
                 away = ru_team(teams[1]["team"]["displayName"])
+
                 status = comp.get("status", {}).get("type", {}).get("shortDetail", "—")
                 venue = comp.get("venue", {}).get("fullName", "—")
+
                 match_time = "—"
                 try:
                     raw_date = e.get("date") or comp.get("date")
@@ -151,6 +102,7 @@ async def get_matches_by_date(days_offset: int = 0):
                         match_time = dt.strftime("%H:%M")
                 except:
                     pass
+
                 score = "—"
                 try:
                     h = teams[0].get("score", "")
@@ -159,17 +111,21 @@ async def get_matches_by_date(days_offset: int = 0):
                         score = f"<b>{h}–{a}</b>"
                 except:
                     pass
+
                 text += f"<b>{home} — {away}</b> {score}\n"
                 text += f"⏰ {match_time} МСК\n"
                 text += f"📍 {venue}\n"
                 text += f"📌 {status}\n\n"
                 text += "─" * 40 + "\n\n"
+
             except:
                 continue
+
         return text
+
     except Exception as e:
-        logging.error(f"API Error: {e}")
-        return "⚠️ Не удалось загрузить матчи. Попробуй позже."
+        logging.error(f"Match API Error: {e}")
+        return "⚠️ Не удалось загрузить расписание. Попробуйте через минуту."
 
 # ==================== СТАДИОНЫ ====================
 async def get_stadiums():
@@ -222,18 +178,6 @@ async def schedule_week(c: CallbackQuery):
         day_text = await get_matches_by_date(i)
         text += day_text
     await msg.edit_text(text[:4000], reply_markup=schedule_back_menu())
-
-@dp.callback_query(F.data == "groups")
-async def groups_handler(c: CallbackQuery):
-    await c.answer()
-    await c.message.edit_text("⏳ Загружаем актуальные группы...", reply_markup=None)
-    await show_groups_list(c)
-
-async def show_groups_list(c: CallbackQuery):
-    await c.message.edit_text(
-        "🏆 <b>Группы Чемпионата мира 2026</b>\n\nВыберите группу:",
-        reply_markup=groups_menu()
-    )
 
 @dp.callback_query(F.data.startswith("group_"))
 async def show_group(c: CallbackQuery):
