@@ -46,6 +46,25 @@ TEAM_NAMES = {
 def ru_team(name: str) -> str:
     return TEAM_NAMES.get(name, name)
 
+# ==================== МАППИНГ team_id → Название ====================
+TEAM_ID_MAP = {
+    "1": "Мексика", "2": "ЮАР", "3": "Южная Корея", "4": "Чехия",
+    "5": "Канада", "6": "Босния и Герцеговина", "7": "Катар", "8": "Швейцария",
+    "9": "Бразилия", "10": "Марокко", "11": "Гаити", "12": "Шотландия",
+    "13": "США", "14": "Парагвай", "15": "Австралия", "16": "Турция",
+    "17": "Германия", "18": "Кюрасао", "19": "Кот-д'Ивуар", "20": "Эквадор",
+    "21": "Нидерланды", "22": "Япония", "23": "Швеция", "24": "Тунис",
+    "25": "Бельгия", "26": "Египет", "27": "Иран", "28": "Новая Зеландия",
+    "29": "Испания", "30": "Кабо-Верде", "31": "Саудовская Аравия", "32": "Уругвай",
+    "33": "Франция", "34": "Сенегал", "35": "Ирак", "36": "Норвегия",
+    "37": "Аргентина", "38": "Алжир", "39": "Австрия", "40": "Иордания",
+    "41": "Португалия", "42": "ДР Конго", "43": "Узбекистан", "44": "Колумбия",
+    "45": "Англия", "46": "Хорватия", "47": "Гана", "48": "Панама",
+}
+
+def get_team_name(team_id):
+    return TEAM_ID_MAP.get(str(team_id), f"Команда {team_id}")
+
 # ==================== ЗАГРУЗКА ГРУПП ИЗ API ====================
 async def get_groups_from_api():
     try:
@@ -105,33 +124,27 @@ def groups_menu():
 async def get_matches_by_date(days_offset: int = 0):
     target_date = datetime.now() + timedelta(days=days_offset)
     date_str = target_date.strftime("%Y%m%d")
-
     url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates={date_str}&limit=100"
-    
+   
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=15) as resp:
                 if resp.status != 200:
                     return "⚠️ API ESPN временно недоступен"
                 data = await resp.json()
-
         events = data.get("events", [])
         if not events:
             return f"⚽ На {target_date.strftime('%d.%m.%Y')} матчей не найдено."
-
         text = f"📅 <b>Матчи — {target_date.strftime('%d.%m.%Y')}</b>\n\n"
-        
+       
         for e in events[:15]:
             try:
                 comp = e["competitions"][0]
                 teams = comp["competitors"]
-
                 home = ru_team(teams[0]["team"]["displayName"])
                 away = ru_team(teams[1]["team"]["displayName"])
-
                 status = comp.get("status", {}).get("type", {}).get("shortDetail", "—")
                 venue = comp.get("venue", {}).get("fullName", "—")
-
                 match_time = "—"
                 try:
                     raw_date = e.get("date") or comp.get("date")
@@ -141,7 +154,6 @@ async def get_matches_by_date(days_offset: int = 0):
                         match_time = dt.strftime("%H:%M")
                 except:
                     pass
-
                 score = "—"
                 try:
                     h = teams[0].get("score", "")
@@ -150,18 +162,14 @@ async def get_matches_by_date(days_offset: int = 0):
                         score = f"<b>{h}–{a}</b>"
                 except:
                     pass
-
                 text += f"<b>{home} — {away}</b> {score}\n"
                 text += f"⏰ {match_time} МСК\n"
                 text += f"📍 {venue}\n"
                 text += f"📌 {status}\n\n"
                 text += "─" * 40 + "\n\n"
-
             except:
                 continue
-
         return text
-
     except Exception as e:
         logging.error(f"API Error: {e}")
         return "⚠️ Не удалось загрузить матчи. Попробуйте позже."
@@ -234,26 +242,25 @@ async def show_groups_list(c: CallbackQuery):
 async def show_group(c: CallbackQuery):
     await c.answer()
     group_letter = c.data.split("_")[1]
-   
+  
     groups = await get_groups_from_api()
     if not groups:
         await c.message.edit_text("⚠️ Не удалось загрузить данные. Попробуйте позже.", reply_markup=back_menu())
         return
 
     group_data = next((g for g in groups if g.get("name") == group_letter), None)
-   
+  
     if not group_data:
         text = f"🏆 <b>Группа {group_letter}</b>\n\nДанные обновляются..."
     else:
         text = f"🏆 <b>Группа {group_letter}</b>\n\n"
         text += "<b>Таблица группы:</b>\n\n"
-        
+       
         teams = group_data.get("teams", [])
-        
-        # Заголовок
+       
         text += "<b>М | Команда              | И | В | Н | П | Голы  | О</b>\n"
-        text += "─" * 45 + "\n"
-        
+        text += "─" * 50 + "\n"
+       
         for i, t in enumerate(teams, 1):
             team_id = t.get("team_id")
             team_name = get_team_name(team_id)
@@ -264,14 +271,14 @@ async def show_group(c: CallbackQuery):
             gf = t.get("gf", "0")
             ga = t.get("ga", "0")
             pts = t.get("pts", "0")
-            
-            text += f"{i} | {team_name:<18} | {mp:1} | {w:1} | {d:1} | {l:1} | {gf}-{ga:<3} | <b>{pts}</b>\n"
+           
+            text += f"{i} | {team_name:<20} | {mp} | {w} | {d} | {l} | {gf}-{ga} | <b>{pts}</b>\n"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ К списку групп", callback_data="groups")],
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
     ])
-   
+  
     await c.message.edit_text(text, reply_markup=kb)
 
 @dp.callback_query(F.data == "stadiums")
