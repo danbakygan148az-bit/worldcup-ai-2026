@@ -186,16 +186,75 @@ async def get_stadiums():
 # ==================== ПЛЕЙ-ОФФ МЕНЮ ====================
 
 def playoff_menu():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="1/16 финала (R32)", callback_data="playoff_r32")],
-        [InlineKeyboardButton(text="1/8 финала (R16)", callback_data="playoff_r16")],
-        [InlineKeyboardButton(text="Четвертьфиналы (QF)", callback_data="playoff_qf")],
-        [InlineKeyboardButton(text="Полуфиналы (SF)", callback_data="playoff_sf")],
-        [InlineKeyboardButton(text="Матч за 3-е место", callback_data="playoff_3rd")],
-        [InlineKeyboardButton(text="ФИНАЛ", callback_data="playoff_final")],
-        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
-    ])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="1/16 финала", callback_data="stage_r32")],
+            [InlineKeyboardButton(text="1/8 финала", callback_data="stage_r16")],
+            [InlineKeyboardButton(text="1/4 финала", callback_data="stage_qf")],
+            [InlineKeyboardButton(text="Полуфиналы", callback_data="stage_sf")],
+            [InlineKeyboardButton(text="Матч за 3 место", callback_data="stage_third")],
+            [InlineKeyboardButton(text="Финал", callback_data="stage_final")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back")],
+        ]
+    )
+#==================================================
+@dp.callback_query(F.data == "playoff")
+async def playoff(callback: CallbackQuery):
+    await callback.answer()
 
+    await callback.message.edit_text(
+        "🏆 Выберите стадию плей-офф:",
+        reply_markup=playoff_menu()
+    )
+async def get_stage(stage):
+
+    url = f"https://worldcup26.ir/api/stages/{stage}"
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as r:
+            data = await r.json()
+
+    matches = data.get("matches", [])
+
+    if not matches:
+        return "Матчи пока отсутствуют."
+
+    text = ""
+
+    for m in matches:
+
+        home = (
+            m.get("home_team", {}).get("name")
+            or m.get("home_team_label")
+            or "TBD"
+        )
+
+        away = (
+            m.get("away_team", {}).get("name")
+            or m.get("away_team_label")
+            or "TBD"
+        )
+
+        score = ""
+
+        if m.get("home_score") is not None:
+            score = f"{m['home_score']}:{m['away_score']}"
+
+        stadium = m.get("stadium", {}).get("name", "Неизвестно")
+
+        time = m["starts_at"]
+
+        status = m["status"]
+
+        text += (
+            f"🏟 <b>{home} — {away}</b>\n"
+            f"⚽ {score}\n"
+            f"📅 {time}\n"
+            f"📍 {stadium}\n"
+            f"📌 {status}\n\n"
+        )
+
+    return text    
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
