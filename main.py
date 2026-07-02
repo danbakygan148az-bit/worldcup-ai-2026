@@ -197,61 +197,40 @@ def playoff_menu():
 
 # ==================== ХЕНДЛЕР ПЛЕЙ-ОФФ ====================
 @dp.callback_query(F.data == "playoff")
-async def playoff_main(c: CallbackQuery):
+async def playoff_handler(c: CallbackQuery):
     await c.answer()
-    await c.message.edit_text(
-        "🏆 <b>Плей-офф ЧМ-2026</b>\n\nВыберите стадию:",
-        reply_markup=playoff_menu()
-    )
+    msg = await c.message.edit_text("⏳ Загружаем плей-офф...")
 
-@dp.callback_query(F.data.startswith("playoff_"))
-async def show_playoff_stage(c: CallbackQuery):
-    await c.answer()
-    stage = c.data.split("_")[1]  # r32, r16, qf и т.д.
-    
-    stage_names = {
-        "R32": "R32",
-        "R16": "R16",
-        "qf": "QF",
-        "sf": "SF",
-        "3rd": "3rd",
-        "final": "Final"
-    }
-    
-    api_stage = stage_names.get(stage, stage.upper())
-    
-    msg = await c.message.edit_text(f"⏳ Загружаем {api_stage}...")
+    text = "🏆 <b>Плей-офф ЧМ-2026</b>\n\n"
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            url = f"https://worldcup26.ir/get/matches?stage={api_stage}"
-            async with session.get(url, timeout=10) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                else:
-                    data = None
-    except:
-        data = None
+    stages = ["R32", "R16", "QF", "SF", "3rd", "Final"]
 
-    if not data or not data.get("matches"):
-        text = f"🏆 <b>Стадия {api_stage}</b>\n\nМатчи этой стадии пока не начались или данные не доступны."
-    else:
-        text = f"🏆 <b>Стадия {api_stage}</b>\n\n"
-        for m in data.get("matches", []):
-            home = m.get("home_team", m.get("home", "—"))
-            away = m.get("away_team", m.get("away", "—"))
-            score = m.get("score", "— : —")
-            time = m.get("time", "")
-            text += f"{home} {score} {away}\n"
-            if time:
-                text += f"⏰ {time}\n"
-            text += "\n"
+    for stage in stages:
+        try:
+            async with aiohttp.ClientSession() as session:
+                url = f"https://worldcup26.ir/get/matches?stage={stage}"
+                async with session.get(url, timeout=8) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if data and data.get("matches"):
+                            text += f"<b>{stage}</b>\n"
+                            for m in data["matches"][:8]:
+                                home = m.get("home", "—")
+                                away = m.get("away", "—")
+                                score = m.get("score", "— : —")
+                                text += f"• {home} {score} {away}\n"
+                            text += "\n"
+        except:
+            continue
+
+    if "R32" not in text and "R16" not in text:
+        text += "Данные плей-офф пока не доступны.\nИдут матчи группового этапа."
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Назад к стадиям", callback_data="playoff")],
+        [InlineKeyboardButton(text="🔄 Обновить", callback_data="playoff")],
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
     ])
-    
+
     await msg.edit_text(text, reply_markup=kb)
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
