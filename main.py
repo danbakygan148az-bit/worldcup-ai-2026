@@ -196,38 +196,45 @@ def playoff_menu():
     ])
 
 # ==================== ХЕНДЛЕР ПЛЕЙ-ОФФ ====================
-@dp.callback_query(F.data == "playoff")
+@@dp.callback_query(F.data == "playoff")
 async def playoff_handler(c: CallbackQuery):
     await c.answer()
     msg = await c.message.edit_text("⏳ Загружаем плей-офф...")
 
     text = "🏆 <b>Плей-офф ЧМ-2026</b>\n\n"
+    stages = [
+        ("R32", "1/16 финала"),
+        ("R16", "1/8 финала"),
+        ("QF", "Четвертьфиналы"),
+        ("SF", "Полуфиналы"),
+        ("3rd", "Матч за 3-е место"),
+        ("Final", "ФИНАЛ")
+    ]
 
-    stages = ["R32", "R16", "QF", "SF", "3rd", "Final"]
-    found = False
+    found_data = False
 
-    for stage in stages:
+    for code, name in stages:
         try:
             async with aiohttp.ClientSession() as session:
-                url = f"https://worldcup26.ir/get/matches?stage={stage}"
-                async with session.get(url, timeout=8) as resp:
+                url = f"https://worldcup26.ir/get/matches?stage={code}"
+                async with session.get(url, timeout=10) as resp:
                     if resp.status == 200:
                         data = await resp.json()
-                        if data and isinstance(data, dict) and data.get("matches"):
-                            found = True
-                            text += f"<b>{stage} ({stage})</b>\n"
-                            for m in data["matches"][:6]:
-                                home = m.get("home_team", m.get("home", "—"))
-                                away = m.get("away_team", m.get("away", "—"))
+                        if data and data.get("matches"):
+                            found_data = True
+                            text += f"<b>{name}</b>\n"
+                            for m in data["matches"]:
+                                home = m.get("home", "—")
+                                away = m.get("away", "—")
                                 score = m.get("score", "— : —")
-                                text += f"{home} {score} {away}\n"
+                                text += f"• {home} {score} {away}\n"
                             text += "\n"
         except:
             continue
 
-    if not found:
-        text += "На данный момент данные плей-офф ещё не доступны.\n"
-        text += "Идёт групповой этап."
+    if not found_data:
+        text += "Данные плей-офф пока не доступны.\n"
+        text += "Идёт групповой этап турнира."
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔄 Обновить", callback_data="playoff")],
