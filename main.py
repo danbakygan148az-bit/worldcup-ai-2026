@@ -84,7 +84,7 @@ def menu():
         [InlineKeyboardButton(text="⚽ Текущие матчи", callback_data="matches")],
         [InlineKeyboardButton(text="📅 Расписание", callback_data="schedule")],
         [InlineKeyboardButton(text="🏆 Группы", callback_data="groups")],
-        [InlineKeyboardButton(text="🏆 Плей-офф", callback_data="playoff")],
+       # [InlineKeyboardButton(text="🏆 Плей-офф", callback_data="playoff")],
         [InlineKeyboardButton(text="🌍 Все команды", callback_data="teams")],
         [InlineKeyboardButton(text="🏟 Стадионы", callback_data="stadiums")],
     ])
@@ -183,125 +183,7 @@ async def get_stadiums():
     text += "🇺🇸 <b>США</b>\n• MetLife Stadium (Нью-Йорк) — 82 500\n• SoFi Stadium (Лос-Анджелес) — 70 000\n• AT&T Stadium (Даллас) — 80 000\n• Mercedes-Benz Stadium (Атланта) — 71 000\n• NRG Stadium (Хьюстон) — 72 000\n• Hard Rock Stadium (Майами) — 65 000\n• Lumen Field (Сиэтл) — 69 000\n• Levi's Stadium (Сан-Франциско) — 68 500\n• Lincoln Financial Field (Филадельфия) — 69 000\n• GEHA Field at Arrowhead (Канзас-Сити) — 76 000\n• Gillette Stadium (Бостон) — 65 000\n\n"
     text += "Всего 16 стадионов."
     return text
-# ==================== ПЛЕЙ-ОФФ МЕНЮ ====================
 
-def playoff_menu():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="1/16 финала", callback_data="stage_r32")],
-            [InlineKeyboardButton(text="1/8 финала", callback_data="stage_r16")],
-            [InlineKeyboardButton(text="1/4 финала", callback_data="stage_qf")],
-            [InlineKeyboardButton(text="Полуфиналы", callback_data="stage_sf")],
-            [InlineKeyboardButton(text="Матч за 3 место", callback_data="stage_third")],
-            [InlineKeyboardButton(text="Финал", callback_data="stage_final")],
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back")],
-        ]
-    )
-#==================================================
-@dp.callback_query(F.data == "playoff")
-async def playoff(callback: CallbackQuery):
-    await callback.answer()
-
-    await callback.message.edit_text(
-        "🏆 Выберите стадию плей-офф:",
-        reply_markup=playoff_menu()
-    )
-async def get_stage(stage):
-
-    try:
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                "https://worldcup26.ir/get/matches",
-                timeout=15
-            ) as resp:
-
-                if resp.status != 200:
-                    return "⚠️ Не удалось получить данные."
-
-                data = await resp.json()
-
-        matches = data.get("matches", [])
-
-        stage_names = {
-            "r32": "1/16 финала",
-            "r16": "1/8 финала",
-            "qf": "Четвертьфиналы",
-            "sf": "Полуфиналы",
-            "third": "Матч за 3 место",
-            "final": "Финал"
-        }
-
-        text = f"🏆 <b>{stage_names.get(stage, stage)}</b>\n\n"
-
-        found = False
-
-        for m in matches:
-
-            if m.get("stage") != stage:
-                continue
-
-            found = True
-
-            home = (
-                m.get("home_team", {}).get("name")
-                or m.get("home_team_label")
-                or "TBD"
-            )
-
-            away = (
-                m.get("away_team", {}).get("name")
-                or m.get("away_team_label")
-                or "TBD"
-            )
-
-            home = ru_team(home)
-            away = ru_team(away)
-
-            stadium = (
-                m.get("stadium", {}).get("name")
-                or "Неизвестно"
-            )
-
-            date = m.get("starts_at", "")
-
-            score = "—"
-
-            if m.get("home_score") is not None:
-                score = f"{m['home_score']}:{m['away_score']}"
-
-            status = m.get("status", "")
-
-            text += (
-                f"⚽ <b>{home} — {away}</b>\n"
-                f"📅 {date}\n"
-                f"🏟 {stadium}\n"
-                f"📊 {score}\n"
-                f"📌 {status}\n\n"
-            )
-
-        if not found:
-            return f"🏆 <b>{stage_names.get(stage, stage)}</b>\n\nМатчи пока не опубликованы."
-
-        return text
-
-    except Exception as e:
-        logging.error(e)
-        return "⚠️ Ошибка загрузки плей-офф."
-
-@dp.callback_query(F.data.startswith("stage_"))
-async def stage_handler(c: CallbackQuery):
-
-    await c.answer()
-
-    stage = c.data.replace("stage_", "")
-
-    text = await get_stage(stage)
-
-    await c.message.edit_text(
-        text,
-        reply_markup=playoff_menu()
-    )        
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
