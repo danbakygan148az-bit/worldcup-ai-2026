@@ -208,53 +208,100 @@ async def playoff(callback: CallbackQuery):
     )
 async def get_stage(stage):
 
-    url = f"https://worldcup26.ir/api/stages/{stage}"
+    try:
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as r:
-            data = await r.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://worldcup26.ir/get/matches",
+                timeout=15
+            ) as resp:
 
-    matches = data.get("matches", [])
+                if resp.status != 200:
+                    return "⚠️ Не удалось получить данные."
 
-    if not matches:
-        return "Матчи пока отсутствуют."
+                data = await resp.json()
 
-    text = ""
+        matches = data.get("matches", [])
 
-    for m in matches:
+        stage_names = {
+            "r32": "1/16 финала",
+            "r16": "1/8 финала",
+            "qf": "Четвертьфиналы",
+            "sf": "Полуфиналы",
+            "third": "Матч за 3 место",
+            "final": "Финал"
+        }
 
-        home = (
-            m.get("home_team", {}).get("name")
-            or m.get("home_team_label")
-            or "TBD"
-        )
+        text = f"🏆 <b>{stage_names.get(stage, stage)}</b>\n\n"
 
-        away = (
-            m.get("away_team", {}).get("name")
-            or m.get("away_team_label")
-            or "TBD"
-        )
+        found = False
 
-        score = ""
+        for m in matches:
 
-        if m.get("home_score") is not None:
-            score = f"{m['home_score']}:{m['away_score']}"
+            if m.get("stage") != stage:
+                continue
 
-        stadium = m.get("stadium", {}).get("name", "Неизвестно")
+            found = True
 
-        time = m["starts_at"]
+            home = (
+                m.get("home_team", {}).get("name")
+                or m.get("home_team_label")
+                or "TBD"
+            )
 
-        status = m["status"]
+            away = (
+                m.get("away_team", {}).get("name")
+                or m.get("away_team_label")
+                or "TBD"
+            )
 
-        text += (
-            f"🏟 <b>{home} — {away}</b>\n"
-            f"⚽ {score}\n"
-            f"📅 {time}\n"
-            f"📍 {stadium}\n"
-            f"📌 {status}\n\n"
-        )
+            home = ru_team(home)
+            away = ru_team(away)
 
-    return text    
+            stadium = (
+                m.get("stadium", {}).get("name")
+                or "Неизвестно"
+            )
+
+            date = m.get("starts_at", "")
+
+            score = "—"
+
+            if m.get("home_score") is not None:
+                score = f"{m['home_score']}:{m['away_score']}"
+
+            status = m.get("status", "")
+
+            text += (
+                f"⚽ <b>{home} — {away}</b>\n"
+                f"📅 {date}\n"
+                f"🏟 {stadium}\n"
+                f"📊 {score}\n"
+                f"📌 {status}\n\n"
+            )
+
+        if not found:
+            return f"🏆 <b>{stage_names.get(stage, stage)}</b>\n\nМатчи пока не опубликованы."
+
+        return text
+
+    except Exception as e:
+        logging.error(e)
+        return "⚠️ Ошибка загрузки плей-офф."
+
+@dp.callback_query(F.data.startswith("stage_"))
+async def stage_handler(c: CallbackQuery):
+
+    await c.answer()
+
+    stage = c.data.replace("stage_", "")
+
+    text = await get_stage(stage)
+
+    await c.message.edit_text(
+        text,
+        reply_markup=playoff_menu()
+    )        
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
