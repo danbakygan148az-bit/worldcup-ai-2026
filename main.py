@@ -84,6 +84,7 @@ def menu():
         [InlineKeyboardButton(text="⚽ Текущие матчи", callback_data="matches")],
         [InlineKeyboardButton(text="📅 Расписание", callback_data="schedule")],
         [InlineKeyboardButton(text="🏆 Группы", callback_data="groups")],
+        [InlineKeyboardButton(text="🏆 Плей-офф", callback_data="playoff")],
         [InlineKeyboardButton(text="🌍 Все команды", callback_data="teams")],
         [InlineKeyboardButton(text="🏟 Стадионы", callback_data="stadiums")],
     ])
@@ -182,7 +183,51 @@ async def get_stadiums():
     text += "🇺🇸 <b>США</b>\n• MetLife Stadium (Нью-Йорк) — 82 500\n• SoFi Stadium (Лос-Анджелес) — 70 000\n• AT&T Stadium (Даллас) — 80 000\n• Mercedes-Benz Stadium (Атланта) — 71 000\n• NRG Stadium (Хьюстон) — 72 000\n• Hard Rock Stadium (Майами) — 65 000\n• Lumen Field (Сиэтл) — 69 000\n• Levi's Stadium (Сан-Франциско) — 68 500\n• Lincoln Financial Field (Филадельфия) — 69 000\n• GEHA Field at Arrowhead (Канзас-Сити) — 76 000\n• Gillette Stadium (Бостон) — 65 000\n\n"
     text += "Всего 16 стадионов."
     return text
+# ==================== ПЛЕЙ-ОФФ ====================
+@dp.callback_query(F.data == "playoff")
+async def playoff_handler(c: CallbackQuery):
+    await c.answer()
+    msg = await c.message.edit_text("⏳ Загружаем сетку плей-офф...")
 
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://worldcup26.ir/get/playoff", timeout=10) as resp:
+                if resp.status != 200:
+                    raise Exception("API недоступен")
+                data = await resp.json()
+    except:
+        data = None
+
+    if not data:
+        text = "🏆 <b>Плей-офф ЧМ-2026</b>\n\nДанные плей-офф обновляются по мере прохождения матчей."
+    else:
+        text = "🏆 <b>Сетка плей-офф Чемпионата мира 2026</b>\n\n"
+        
+        stages = {
+            "R32": "1/16 финала",
+            "R16": "1/8 финала",
+            "QF": "Четвертьфиналы",
+            "SF": "Полуфиналы",
+            "3rd": "Матч за 3-е место",
+            "Final": "ФИНАЛ"
+        }
+        
+        for stage_key, stage_name in stages.items():
+            if stage_key in data:
+                text += f"<b>{stage_name}</b>\n"
+                matches = data[stage_key]
+                for m in matches[:8]:   # ограничиваем количество
+                    home = m.get("home", "—")
+                    away = m.get("away", "—")
+                    score = m.get("score", "— : —")
+                    text += f"• {home} {score} {away}\n"
+                text += "\n"
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
+    ])
+    
+    await msg.edit_text(text, reply_markup=kb)
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
