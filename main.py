@@ -185,54 +185,17 @@ async def get_stadiums():
     return text
 # ==================== ПЛЕЙ-ОФФ МЕНЮ ====================
 
-
-# ==================== ХЕНДЛЕР ПЛЕЙ-ОФФ ====================
-@@dp.callback_query(F.data == "playoff")
-async def playoff_handler(c: CallbackQuery):
-    await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем плей-офф...")
-
-    text = "🏆 <b>Плей-офф ЧМ-2026</b>\n\n"
-    stages = [
-        ("R32", "1/16 финала"),
-        ("R16", "1/8 финала"),
-        ("QF", "Четвертьфиналы"),
-        ("SF", "Полуфиналы"),
-        ("3rd", "Матч за 3-е место"),
-        ("Final", "ФИНАЛ")
-    ]
-
-    found_data = False
-
-    for code, name in stages:
-        try:
-            async with aiohttp.ClientSession() as session:
-                url = f"https://worldcup26.ir/get/matches?stage={code}"
-                async with session.get(url, timeout=10) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        if data and data.get("matches"):
-                            found_data = True
-                            text += f"<b>{name}</b>\n"
-                            for m in data["matches"]:
-                                home = m.get("home", "—")
-                                away = m.get("away", "—")
-                                score = m.get("score", "— : —")
-                                text += f"• {home} {score} {away}\n"
-                            text += "\n"
-        except:
-            continue
-
-    if not found_data:
-        text += "Данные плей-офф пока не доступны.\n"
-        text += "Идёт групповой этап турнира."
-
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔄 Обновить", callback_data="playoff")],
+def playoff_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="1/16 финала (R32)", callback_data="playoff_r32")],
+        [InlineKeyboardButton(text="1/8 финала (R16)", callback_data="playoff_r16")],
+        [InlineKeyboardButton(text="Четвертьфиналы (QF)", callback_data="playoff_qf")],
+        [InlineKeyboardButton(text="Полуфиналы (SF)", callback_data="playoff_sf")],
+        [InlineKeyboardButton(text="Матч за 3-е место", callback_data="playoff_3rd")],
+        [InlineKeyboardButton(text="ФИНАЛ", callback_data="playoff_final")],
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
     ])
 
-    await msg.edit_text(text, reply_markup=kb)
 # ==================== ХЕНДЛЕРЫ ====================
 @dp.callback_query(F.data == "matches")
 async def matches_handler(c: CallbackQuery):
