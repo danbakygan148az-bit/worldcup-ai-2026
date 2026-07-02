@@ -204,6 +204,7 @@ async def playoff_handler(c: CallbackQuery):
     text = "🏆 <b>Плей-офф ЧМ-2026</b>\n\n"
 
     stages = ["R32", "R16", "QF", "SF", "3rd", "Final"]
+    found = False
 
     for stage in stages:
         try:
@@ -212,19 +213,21 @@ async def playoff_handler(c: CallbackQuery):
                 async with session.get(url, timeout=8) as resp:
                     if resp.status == 200:
                         data = await resp.json()
-                        if data and data.get("matches"):
-                            text += f"<b>{stage}</b>\n"
-                            for m in data["matches"][:8]:
-                                home = m.get("home", "—")
-                                away = m.get("away", "—")
+                        if data and isinstance(data, dict) and data.get("matches"):
+                            found = True
+                            text += f"<b>{stage} ({stage})</b>\n"
+                            for m in data["matches"][:6]:
+                                home = m.get("home_team", m.get("home", "—"))
+                                away = m.get("away_team", m.get("away", "—"))
                                 score = m.get("score", "— : —")
-                                text += f"• {home} {score} {away}\n"
+                                text += f"{home} {score} {away}\n"
                             text += "\n"
         except:
             continue
 
-    if "R32" not in text and "R16" not in text:
-        text += "Данные плей-офф пока не доступны.\nИдут матчи группового этапа."
+    if not found:
+        text += "На данный момент данные плей-офф ещё не доступны.\n"
+        text += "Идёт групповой этап."
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔄 Обновить", callback_data="playoff")],
