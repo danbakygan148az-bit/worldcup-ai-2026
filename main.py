@@ -183,56 +183,72 @@ async def get_stadiums():
     text += "🇺🇸 <b>США</b>\n• MetLife Stadium (Нью-Йорк) — 82 500\n• SoFi Stadium (Лос-Анджелес) — 70 000\n• AT&T Stadium (Даллас) — 80 000\n• Mercedes-Benz Stadium (Атланта) — 71 000\n• NRG Stadium (Хьюстон) — 72 000\n• Hard Rock Stadium (Майами) — 65 000\n• Lumen Field (Сиэтл) — 69 000\n• Levi's Stadium (Сан-Франциско) — 68 500\n• Lincoln Financial Field (Филадельфия) — 69 000\n• GEHA Field at Arrowhead (Канзас-Сити) — 76 000\n• Gillette Stadium (Бостон) — 65 000\n\n"
     text += "Всего 16 стадионов."
     return text
-# ==================== LIVE ПЛЕЙ-ОФФ (через ESPN) ====================
-async def get_playoff_matches():
+# ==================== ПЛЕЙ-ОФФ МЕНЮ ====================
+def playoff_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="1/16 финала (R32)", callback_data="playoff_r32")],
+        [InlineKeyboardButton(text="1/8 финала (R16)", callback_data="playoff_r16")],
+        [InlineKeyboardButton(text="Четвертьфиналы (QF)", callback_data="playoff_qf")],
+        [InlineKeyboardButton(text="Полуфиналы (SF)", callback_data="playoff_sf")],
+        [InlineKeyboardButton(text="Матч за 3-е место", callback_data="playoff_3rd")],
+        [InlineKeyboardButton(text="ФИНАЛ", callback_data="playoff_final")],
+        [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
+    ])
+
+# ==================== ХЕНДЛЕР ПЛЕЙ-ОФФ ====================
+@dp.callback_query(F.data == "playoff")
+async def playoff_main(c: CallbackQuery):
+    await c.answer()
+    await c.message.edit_text(
+        "🏆 <b>Плей-офф ЧМ-2026</b>\n\nВыберите стадию:",
+        reply_markup=playoff_menu()
+    )
+
+@dp.callback_query(F.data.startswith("playoff_"))
+async def show_playoff_stage(c: CallbackQuery):
+    await c.answer()
+    stage = c.data.split("_")[1]  # r32, r16, qf и т.д.
+    
+    stage_names = {
+        "r32": "R32",
+        "r16": "R16",
+        "qf": "QF",
+        "sf": "SF",
+        "3rd": "3rd",
+        "final": "Final"
+    }
+    
+    api_stage = stage_names.get(stage, stage.upper())
+    
+    msg = await c.message.edit_text(f"⏳ Загружаем {api_stage}...")
+
     try:
         async with aiohttp.ClientSession() as session:
-            # ESPN поддерживает плей-офф через тот же endpoint
-            url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?groups=playoff"
-            async with session.get(url, timeout=12) as resp:
+            url = f"https://worldcup26.ir/get/matches?stage={api_stage}"
+            async with session.get(url, timeout=10) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    return data.get("events", [])
+                else:
+                    data = None
     except:
-        pass
-    return []
+        data = None
 
-@dp.callback_query(F.data == "playoff")
-async def playoff_handler(c: CallbackQuery):
-    await c.answer()
-    msg = await c.message.edit_text("⏳ Загружаем live-сетку плей-офф...")
-
-    matches = await get_playoff_matches()
-
-    if not matches:
-        text = "🏆 <b>Плей-офф ЧМ-2026</b>\n\n"
-        text += "Live-данные плей-офф загружаются...\n"
-        text += "Пока доступны только матчи группового этапа."
+    if not data or not data.get("matches"):
+        text = f"🏆 <b>Стадия {api_stage}</b>\n\nМатчи этой стадии пока не начались или данные не доступны."
     else:
-        text = "🏆 <b>Live Плей-офф ЧМ-2026</b>\n\n"
-        for m in matches[:20]:
-            try:
-                comp = m["competitions"][0]
-                teams = comp["competitors"]
-                home = ru_team(teams[0]["team"]["displayName"])
-                away = ru_team(teams[1]["team"]["displayName"])
-                score = "—"
-                try:
-                    h = teams[0].get("score", "")
-                    a = teams[1].get("score", "")
-                    if h or a:
-                        score = f"<b>{h}–{a}</b>"
-                except:
-                    pass
-                status = comp.get("status", {}).get("type", {}).get("shortDetail", "—")
-                
-                text += f"<b>{home} — {away}</b> {score}\n"
-                text += f"📌 {status}\n\n"
-            except:
-                continue
+        text = f"🏆 <b>Стадия {api_stage}</b>\n\n"
+        for m in data.get("matches", []):
+            home = m.get("home_team", m.get("home", "—"))
+            away = m.get("away_team", m.get("away", "—"))
+            score = m.get("score", "— : —")
+            time = m.get("time", "")
+            text += f"{home} {score} {away}\n"
+            if time:
+                text += f"⏰ {time}\n"
+            text += "\n"
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔄 Обновить", callback_data="playoff")],
+        [InlineKeyboardButton(text="⬅️ Назад к стадиям", callback_data="playoff")],
         [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_to_main")]
     ])
     
