@@ -210,8 +210,8 @@ async def show_playoff_stage(c: CallbackQuery):
     stage = c.data.split("_")[1]  # r32, r16, qf и т.д.
     
     stage_names = {
-        "r32": "R32",
-        "r16": "R16",
+        "R32": "R32",
+        "R16": "R16",
         "qf": "QF",
         "sf": "SF",
         "3rd": "3rd",
